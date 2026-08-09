@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, Filter, Plus, Package, AlertTriangle, Image as ImageIcon, X, Check, Edit2, Upload } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -83,7 +83,7 @@ const initialCatalog = [
   },
 ];
 
-export function ProductsCatalogPage() {
+function ProductsCatalogContent() {
   const searchParams = useSearchParams();
   const filterQuery = searchParams.get("filter");
 
@@ -151,8 +151,8 @@ export function ProductsCatalogPage() {
         <CardContent className="p-0 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5">
-                Full Read/Write Catalog Manager
+              <Badge className="bg-[#fcf3e3] text-[#713105] border-[#cfab71]/50 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5">
+                Inventory Manager Portal
               </Badge>
             </div>
             <h1 className="text-2xl font-bold text-[#341100] tracking-tight">
@@ -435,4 +435,16 @@ export function ProductsCatalogPage() {
   );
 }
 
-export default ProductsCatalogPage;
+export default function ProductsCatalogPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 text-center text-xs font-semibold text-[#7f5e35]">
+          Loading products catalog...
+        </div>
+      }
+    >
+      <ProductsCatalogContent />
+    </Suspense>
+  );
+}

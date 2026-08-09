@@ -21,8 +21,9 @@ All page designs, UI components, layout structures, and color/typography specifi
    * Metadata Details: `text-xs font-normal text-[#7f5e35]`
    * Pill Badges: `text-[11px] font-semibold uppercase tracking-wide`
 
-## Execution Rules:
+## Execution & Interaction Rules:
 5. **No Build On Every Edit**: Do not run `npm run build` after every file edit. Run only when requested.
 6. **No Auto Dev Server**: Do not run `npm run dev` automatically.
 7. **No Auto Git Commits**: Do not commit or push automatically.
 8. **Follow agent/DESIGN.md**: Always depend on `agent/DESIGN.md` for UI implementations.
+9. **Provide 3+ Options on Suggestions**: When providing suggestions or recommendations to the user, always present 3 or more clear options.

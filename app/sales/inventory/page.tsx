@@ -76,7 +76,7 @@ const mockProducts = [
   },
 ];
 
-export function InventoryLookupPage() {
+export function SalesInventoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredProducts = mockProducts.filter(
@@ -203,19 +203,19 @@ export function InventoryLookupPage() {
                   </td>
                   <td className="py-3.5 px-4 font-bold text-[#713105]">{product.retailPrice}</td>
                   <td className="py-3.5 px-4 font-medium text-[#7f5e35]">{product.wholesalePrice}</td>
-                  <td className="py-3.5 px-4 text-right">
+                  <td className="py-3.5 px-4 text-right whitespace-nowrap">
                     {product.status === "In Stock" && (
-                      <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[11px] uppercase tracking-wide">
+                      <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 whitespace-nowrap">
                         In Stock
                       </Badge>
                     )}
                     {product.status === "Low Stock" && (
-                      <Badge className="bg-amber-50 text-[#713105] border-amber-200 text-[11px] uppercase tracking-wide">
+                      <Badge className="bg-amber-50 text-[#713105] border-amber-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 whitespace-nowrap">
                         Low Stock
                       </Badge>
                     )}
                     {product.status === "Out of Stock" && (
-                      <Badge className="bg-red-50 text-red-700 border-red-200 text-[11px] uppercase tracking-wide">
+                      <Badge className="bg-red-50 text-red-700 border-red-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 whitespace-nowrap">
                         Out of Stock
                       </Badge>
                     )}
@@ -230,4 +230,4 @@ export function InventoryLookupPage() {
   );
 }
 
-export default InventoryLookupPage;
+export default SalesInventoryPage;

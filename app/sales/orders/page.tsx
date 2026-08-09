@@ -55,7 +55,7 @@ const initialOrders = [
   },
 ];
 
-export function SalesPage() {
+export function SalesOrdersPage() {
   const [orders, setOrders] = useState(initialOrders);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -332,4 +332,4 @@ export function SalesPage() {
   );
 }
 
-export default SalesPage;
+export default SalesOrdersPage;

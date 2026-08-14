@@ -2,7 +2,7 @@
 
 ## 1. Project Overview
 * **Project Name:** Mini-ERP Web System (`mini-erp-app`)
-* **Tech Stack:** Next.js (App Router), React 19, TypeScript, Tailwind CSS v4, shadcn/ui primitives, Recharts, Lucide Icons.
+* **Tech Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Supabase (Auth, PostgreSQL DB & Row-Level Security), shadcn/ui primitives, Recharts, Lucide Icons, Sonner.
 * **Workspace Location:** `c:\Users\ADMIN\Desktop\Folder1\mini-erp-app`
 
 ---
@@ -18,39 +18,51 @@ All UI components strictly adhere to the warm coffee/espresso color palette:
 
 ---
 
-## 3. Triple Portal Architecture & Dedicated Route Namespaces
+## 3. Authentication & Multi-Portal Architecture
 
-### A. Administrator Portal (`/admin/*`)
-Complete uniform `/admin/*` namespace for system administrators with `ADMINISTRATOR PORTAL` header badge.
-* **`/admin/dashboard`** ([app/admin/dashboard/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/dashboard/page.tsx)): High-level store overview with system-wide KPI cards and charts.
-* **`/admin/inventory`** ([app/admin/inventory/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/inventory/page.tsx)): Full Read/Write inventory management.
-* **`/admin/sales`** ([app/admin/sales/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/sales/page.tsx)): Transaction management and invoicing.
-* **`/admin/finance`** ([app/admin/finance/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/finance/page.tsx)): General ledger, revenue vs expense breakdown, tax provisions.
-* **`/admin/users`** ([app/admin/users/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/users/page.tsx)): User Management panel for employee registration and role assignment (`Admin`, `Sales`, `Inventory`).
-* **`/admin/logs`** ([app/admin/logs/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/logs/page.tsx)): Real-time Audit & System Logs.
-* **`/admin/settings`** ([app/admin/settings/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/settings/page.tsx)): System Settings.
+### A. Authentication & Session Management
+* **Staff Login (`/login`)** ([app/login/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/login/page.tsx)):
+  * Staff email and password authentication backed by Supabase Auth (`signInAction`).
+  * Features show/hide password toggle (`Eye`/`EyeOff` Lucide icons) and a centered circular loading overlay backdrop during authentication.
+* **User Profile Card & Sign Out**: Replaced manual role switcher with active User Profile Card and Sign Out button ([components/main-sidebar.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/main-sidebar.tsx)).
+* **Next.js 16 Request Interceptor**: Edge request interceptor at [proxy.ts](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/proxy.ts) handling session validation and role-based access control.
 
-### B. Sales Representative Portal (`/sales/*`)
-Dedicated top-level `/sales/*` URL namespace for sales representatives (e.g. John Miller) with `SALES REPRESENTATIVE PORTAL` header badge.
-* **`/sales/overview`** ([app/sales/overview/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/sales/overview/page.tsx)): Personal sales performance, quota progress bar ($15,450 / $20,000), pending invoices count (4), orders created today (8), and total commission ($1,545).
-* **`/sales/orders`** ([app/sales/orders/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/sales/orders/page.tsx)): **Full Read/Write Access** workspace for adding new sales orders, inputting customer details, selecting products, processing invoices, and modal order generation.
-* **`/sales/inventory`** ([app/sales/inventory/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/sales/inventory/page.tsx)): **Read-Only Access** product lookup panel for checking stock availability and wholesale/retail pricing (**"+ Add Product" button hidden**).
-
-### C. Inventory Manager Portal (`/inventory/*`)
-Dedicated top-level `/inventory/*` URL namespace for warehouse and inventory managers with `INVENTORY MANAGER PORTAL` header badge.
-* **`/inventory/overview`** ([app/inventory/overview/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/overview/page.tsx)): Macro warehouse metrics (Total Active SKUs: 482, Items Requiring Restock: 14, Out-of-Stock Items: 3, Categories Distribution).
-* **`/inventory/catalog`** ([app/inventory/catalog/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/catalog/page.tsx)): **Full Read/Write Access** primary workspace for adding new SKUs, editing stock counts, updating categories, unit pricing, and uploading product images.
-* **`/inventory/low-stock`** ([app/inventory/low-stock/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/low-stock/page.tsx)): Dedicated action view highlighting items below reorder levels with restock actions.
-* **`/inventory/stock-logs`** ([app/inventory/stock-logs/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/stock-logs/page.tsx)): Operational log showing every stock deduction (from customer orders) and addition (from supplier shipments).
+### B. Dedicated Route Namespaces
+1. **Administrator Portal (`/admin/*`)**: Full system management, user administration, financial ledgers, system audit logs, unified inventory management.
+2. **Sales Representative Portal (`/sales/*`)**: Order creation, invoicing, read-only stock lookup.
+3. **Inventory Manager Portal (`/inventory/*`)**: SKU catalog management, stock movement logs, low-stock reorder triggers.
 
 ---
 
-## 4. Key UI Fixes & Enhancements Completed
-1. **Explicit Role-Based Routing**: `/admin/*` vs. `/sales/*` vs. `/inventory/*`.
-2. **3-Way Portal Switcher**: `MainSidebar` footer features an instant 3-button role switcher (`Admin` | `Sales` | `Inventory`).
-3. **Status Pill Formatting**: Fixed status pills (`OUT OF STOCK`, `LOW STOCK`, `IN STOCK`) with `whitespace-nowrap inline-flex items-center justify-center shrink-0` in [badge.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/ui/badge.tsx) so text never wraps onto multiple lines.
-4. **Fixed Sticky Sidebar Position**: Applied `h-screen sticky top-0 z-20` on `SidebarRail` and `MainSidebar` so sidebars stay anchored while page content scrolls.
-5. **Clean Typography & Emojis Stripped**: Professional ERP styling with clean text and no inline emojis in navigation labels.
+## 4. Key Features & Administrative Capabilities Completed
+
+1. **User Management & 4-Action Dropdown Menu** ([app/admin/users/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/users/page.tsx)):
+   * **Admin Employee Registration**: Admin-only staff creation via Supabase Service Role client (`registerEmployeeAction`).
+   * **✏️ Edit Staff Role**: Opens modal to re-assign portal access (`Admin`, `Sales`, `Inventory`) and updates Supabase `profiles` & `auth.users`.
+   * **🔄 Activate / Deactivate Account**: Toggles staff account status between `Active` and `Inactive`.
+   * **🔑 Send Password Reset**: Dispatches password recovery link to work email (`sendPasswordResetAction`).
+   * **🗑️ Delete Account**: Prompts confirmation modal before deleting user via `deleteEmployeeAction`.
+   * **Intelligent Popover Direction & Bottom Padding**: Popover opens upwards (`bottom-10`) on lower rows with container `pb-28`, eliminating layout and sidebar height jumps.
+   * **Multi-Criteria Directory Filter**: Interactive Filter button with popover for Role, Status, and Search filtering with active filter pills.
+
+2. **Option 4 All-In-One Inventory & Product Suite** ([app/inventory/catalog/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/catalog/page.tsx)):
+   * **Shared Product Directory**: Reused directly by Admin (`/admin/inventory`) and Inventory Manager (`/inventory/catalog`) to prevent code redundancy.
+   * **View Mode Switcher**: Toggle between **Table View** 📊 and **Visual Card Grid View** 🖼️ with full product card previews and action footers.
+   * **Smooth Manual Numeric Input**: Hides browser arrow steppers (`[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none`) across Initial Stock, Reorder Level, Retail Price, Wholesale Price, and Quick Stock Adjustment fields.
+   * **Interactive Image Upload**: Multi-format image dropzone (`.png`, `.jpg`, `.jpeg`, `.webp`) with instant FileReader Base64 thumbnail preview and circular spinning loader state.
+   * **Supabase Bucket Upload & Base64 Fallback**: `uploadProductImageAction` uploads image files to Supabase Storage bucket (`product-images`) with automatic Base64 fallback if bucket is missing.
+   * **Cascading Delete with Admin Service Role Client**: `deleteProductAction` uses `createAdminClient()` (`SUPABASE_SERVICE_ROLE_KEY`) to safely remove dependent `stock_logs` and `order_items` records before deleting product rows, bypassing RLS constraints.
+   * **Low Stock & Restock Action** ([app/inventory/low-stock/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/low-stock/page.tsx)): Filtered real-time low-stock directory with 1-click supplier restock shipment modal.
+   * **Stock Movement Audit Trail** ([app/inventory/stock-logs/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/stock-logs/page.tsx)): Live audit log tracking stock additions and deductions with net shift KPI cards.
+
+3. **Global Toast Notification System** ([components/ui/sonner.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/ui/sonner.tsx)):
+   * Integrated `sonner` shadcn toast notification system (`components/ui/sonner.tsx` & `app/layout.tsx`) firing real-time toasts for product creation, SKU edits, image uploads, stock shifts, and deletions.
+
+4. **Option 1 Skeleton Loading States**:
+   * Implemented skeleton shimmer loading rows (`animate-pulse`) across **User Management**, **Product Catalog**, **Stock Movement Logs**, and **Sales Orders** pages to eliminate visual flashes of fallback mock data.
+
+5. **Database Schema & RLS Policies** ([supabase/schema.sql](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/supabase/schema.sql)):
+   * DDL for 6 tables (`profiles`, `products`, `orders`, `order_items`, `stock_logs`, `audit_logs`), RLS policies (including `SELECT`, `INSERT`, `UPDATE`, and `DELETE` policies for `products`, `stock_logs`, and `order_items`), and `handle_new_user()` trigger.
 
 ---
 
@@ -60,3 +72,4 @@ Dedicated top-level `/inventory/*` URL namespace for warehouse and inventory man
 3. **No Auto Git Commits**: Do NOT perform git commit or push operations; user handles repository management.
 4. **Design Alignment**: Always reference `agent/DESIGN.md` for any UI implementations or styling changes.
 5. **Always Provide 3+ Options**: Provide 3 or more options whenever making suggestions or recommendations.
+6. **Use shadcn for UI components**.

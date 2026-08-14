@@ -1,70 +1,119 @@
 "use client";
 
-import React, { useState } from "react";
-import { Search, Filter, AlertTriangle, PlusCircle, ArrowUpRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Filter, AlertTriangle, PlusCircle, ArrowUpRight, Check, X, Loader2, Package } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-const lowStockItems = [
-  {
-    id: "PRD-102",
-    name: "Minimalist Walnut Table Lamp",
-    category: "Lighting",
-    sku: "LT-LAMP-088",
-    stock: 6,
-    reorderLevel: 10,
-    retailPrice: "$125.00",
-    supplier: "Lumina Crafts Co.",
-    status: "Low Stock",
-  },
-  {
-    id: "PRD-104",
-    name: "Linen Textured Cushion Covers",
-    category: "Home Decor",
-    sku: "HD-CUSH-014",
-    stock: 3,
-    reorderLevel: 15,
-    retailPrice: "$28.00",
-    supplier: "Textile Craft Ltd.",
-    status: "Low Stock",
-  },
-  {
-    id: "PRD-105",
-    name: "Japanese Teak Pour-Over Stand",
-    category: "Kitchenware",
-    sku: "KW-TEAK-009",
-    stock: 0,
-    reorderLevel: 5,
-    retailPrice: "$89.00",
-    supplier: "Nippon Woodworks",
-    status: "Out of Stock",
-  },
-  {
-    id: "PRD-107",
-    name: "Arch Framed Brass Mirror",
-    category: "Home Decor",
-    sku: "HD-MIRR-041",
-    stock: 2,
-    reorderLevel: 8,
-    retailPrice: "$140.00",
-    supplier: "Artisan Metalworks",
-    status: "Low Stock",
-  },
-];
+import { fetchProductsAction, adjustStockAction } from "@/app/actions/products";
 
 export function LowStockRestockPage() {
+  const [items, setItems] = useState<any[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  const filteredItems = lowStockItems.filter(
+  // Restock Modal States
+  const [restockingItem, setRestockingItem] = useState<any | null>(null);
+  const [restockQty, setRestockQty] = useState(25);
+  const [supplierNote, setSupplierNote] = useState("Supplier Purchase Shipment Order");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadLowStockProducts() {
+      setIsLoadingData(true);
+      const res = await fetchProductsAction();
+      if (res.success && Array.isArray(res.data)) {
+        const mapped = res.data
+          .filter((p: any) => p.stock_quantity <= p.reorder_level)
+          .map((p: any) => ({
+            id: p.product_code || `PRD-${p.id.slice(0, 4)}`,
+            dbId: p.id,
+            name: p.name,
+            category: p.category,
+            sku: p.sku,
+            stock: p.stock_quantity,
+            reorderLevel: p.reorder_level,
+            retailPrice: `$${Number(p.retail_price).toFixed(2)}`,
+            supplier: "Artisan Crafts Supplier",
+            status: p.status,
+          }));
+        setItems(mapped);
+      } else {
+        setItems([]);
+      }
+      setIsLoadingData(false);
+    }
+    loadLowStockProducts();
+  }, []);
+
+  const handleConfirmRestock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!restockingItem) return;
+    setActionLoading(true);
+
+    const res = await adjustStockAction({
+      productId: restockingItem.dbId || restockingItem.id,
+      productName: restockingItem.name,
+      productSku: restockingItem.sku,
+      currentStock: restockingItem.stock,
+      shiftAmount: Number(restockQty),
+      reason: supplierNote,
+      actorName: "Inventory Manager",
+      type: "Addition",
+    });
+
+    setActionLoading(false);
+
+    if (res.success) {
+      const newStock = res.newStock ?? (restockingItem.stock + Number(restockQty));
+      setFeedback({
+        type: "success",
+        message: `Restocked ${restockQty} units of ${restockingItem.name}. New Stock: ${newStock} units.`,
+      });
+
+      // Remove from low stock list if it's now above reorder level
+      if (newStock > restockingItem.reorderLevel) {
+        setItems(items.filter((i) => i.id !== restockingItem.id));
+      } else {
+        setItems(items.map((i) => (i.id === restockingItem.id ? { ...i, stock: newStock } : i)));
+      }
+      setRestockingItem(null);
+    } else {
+      setFeedback({ type: "error", message: res.error || "Failed to restock SKU." });
+    }
+  };
+
+  const filteredItems = items.filter(
     (product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sku.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const outOfStockCount = items.filter((i) => i.stock === 0).length;
+
   return (
     <div className="space-y-6">
+      {/* Feedback Banner */}
+      {feedback && (
+        <div
+          className={`p-4 rounded-xl border flex items-center justify-between animate-in fade-in slide-in-from-top-2 text-xs font-semibold ${
+            feedback.type === "success"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+              : "bg-red-50 border-red-200 text-red-900"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-700" />
+            <span>{feedback.message}</span>
+          </div>
+          <button onClick={() => setFeedback(null)} className="text-stone-500 hover:text-stone-800 cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header Banner */}
       <Card className="border-[#e8decf] shadow-xs rounded-2xl bg-white p-6">
         <CardContent className="p-0 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -75,17 +124,12 @@ export function LowStockRestockPage() {
               </Badge>
             </div>
             <h1 className="text-2xl font-bold text-[#341100] tracking-tight">
-              Low Stock & Restock
+              Low Stock & Supplier Restock
             </h1>
             <p className="text-xs font-normal text-[#7f5e35] mt-1">
-              Filtered action view highlighting items that have dropped below their defined reorder level.
+              Live action list highlighting products currently at or below reorder level.
             </p>
           </div>
-
-          <Button className="bg-[#713105] text-[#fff7e8] hover:bg-[#4f351c] gap-2 rounded-xl text-xs font-semibold px-4 py-2 shadow-xs">
-            <PlusCircle className="w-4 h-4" />
-            Create Supplier Purchase Order
-          </Button>
         </CardContent>
       </Card>
 
@@ -96,8 +140,8 @@ export function LowStockRestockPage() {
             <span>Low Stock Items</span>
             <AlertTriangle className="w-4 h-4 text-amber-600" />
           </div>
-          <div className="text-2xl font-bold text-[#713105] mt-2">14</div>
-          <span className="text-[11px] text-[#713105] font-semibold">Below reorder threshold</span>
+          <div className="text-2xl font-bold text-[#713105] mt-2">{items.length}</div>
+          <span className="text-[11px] text-[#713105] font-semibold">At or below reorder threshold</span>
         </Card>
 
         <Card className="border-[#e8decf] bg-white p-4 rounded-xl">
@@ -105,17 +149,17 @@ export function LowStockRestockPage() {
             <span>Out-of-Stock SKUs</span>
             <AlertTriangle className="w-4 h-4 text-red-600" />
           </div>
-          <div className="text-2xl font-bold text-red-700 mt-2">3</div>
+          <div className="text-2xl font-bold text-red-700 mt-2">{outOfStockCount}</div>
           <span className="text-[11px] text-red-700 font-semibold">Critical 0 balance</span>
         </Card>
 
         <Card className="border-[#e8decf] bg-white p-4 rounded-xl">
           <div className="flex items-center justify-between text-[#7f5e35] text-xs font-semibold uppercase">
-            <span>Pending Restock POs</span>
+            <span>Reorder Readiness</span>
             <ArrowUpRight className="w-4 h-4 text-[#713105]" />
           </div>
-          <div className="text-2xl font-bold text-[#341100] mt-2">5</div>
-          <span className="text-[11px] text-[#7f5e35] font-normal">Supplier orders in transit</span>
+          <div className="text-2xl font-bold text-emerald-800 mt-2">100%</div>
+          <span className="text-[11px] text-[#7f5e35] font-normal">1-Click supplier restock enabled</span>
         </Card>
       </div>
 
@@ -137,10 +181,6 @@ export function LowStockRestockPage() {
                 className="pl-9 bg-[#fff7e8] border-[#e8decf] text-xs text-[#341100] rounded-xl placeholder:text-[#7f5e35]/60"
               />
             </div>
-            <Button variant="outline" className="border-[#e8decf] text-[#4f351c] hover:bg-[#fff7e8] gap-1.5 text-xs rounded-xl">
-              <Filter className="w-3.5 h-3.5" />
-              Filter
-            </Button>
           </div>
         </CardHeader>
 
@@ -153,46 +193,149 @@ export function LowStockRestockPage() {
                 <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4">Current Stock</th>
                 <th className="py-3 px-4">Reorder Level</th>
-                <th className="py-3 px-4">Preferred Supplier</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e8decf]/60">
-              {filteredItems.map((item) => (
-                <tr key={item.id} className="hover:bg-[#fcf3e3]/50 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-[#713105]">{item.sku}</td>
-                  <td className="py-3.5 px-4 font-medium text-[#341100]">
-                    {item.name}
-                    <div className="text-[10px] text-[#7f5e35] font-normal">{item.id}</div>
-                  </td>
-                  <td className="py-3.5 px-4 text-[#7f5e35]">{item.category}</td>
-                  <td className="py-3.5 px-4 font-bold text-red-700">{item.stock} units</td>
-                  <td className="py-3.5 px-4 font-medium text-[#4f351c]">{item.reorderLevel} units</td>
-                  <td className="py-3.5 px-4 text-[#7f5e35]">{item.supplier}</td>
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    {item.status === "Low Stock" && (
-                      <Badge className="bg-amber-50 text-[#713105] border-amber-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 whitespace-nowrap">
-                        Low Stock
-                      </Badge>
-                    )}
-                    {item.status === "Out of Stock" && (
-                      <Badge className="bg-red-50 text-red-700 border-red-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 whitespace-nowrap">
-                        Out of Stock
-                      </Badge>
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <Button size="sm" className="bg-[#713105] text-[#fff7e8] hover:bg-[#4f351c] text-[11px] rounded-lg px-3 py-1">
-                      Restock SKU
-                    </Button>
+              {isLoadingData ? (
+                [...Array(4)].map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="py-3.5 px-4"><div className="w-16 h-3 bg-[#e8decf]/60 rounded-md" /></td>
+                    <td className="py-3.5 px-4"><div className="w-32 h-3 bg-[#e8decf]/70 rounded-md" /></td>
+                    <td className="py-3.5 px-4"><div className="w-20 h-3 bg-[#e8decf]/60 rounded-md" /></td>
+                    <td className="py-3.5 px-4"><div className="w-14 h-3 bg-[#e8decf]/60 rounded-md" /></td>
+                    <td className="py-3.5 px-4"><div className="w-14 h-3 bg-[#e8decf]/60 rounded-md" /></td>
+                    <td className="py-3.5 px-4"><div className="w-16 h-5 bg-[#e8decf]/60 rounded-full" /></td>
+                    <td className="py-3.5 px-4 text-right"><div className="w-20 h-7 bg-[#e8decf]/60 rounded-lg ml-auto" /></td>
+                  </tr>
+                ))
+              ) : filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-xs text-[#7f5e35]">
+                    <div className="max-w-xs mx-auto space-y-2">
+                      <Package className="w-8 h-8 text-emerald-600 mx-auto opacity-70" />
+                      <p className="font-semibold text-[#341100]">Stock Levels Healthy</p>
+                      <p className="text-[11px] text-[#7f5e35]">No product SKUs currently below reorder levels.</p>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-[#fcf3e3]/50 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-[#713105]">{item.sku}</td>
+                    <td className="py-3.5 px-4 font-medium text-[#341100]">
+                      {item.name}
+                      <div className="text-[10px] text-[#7f5e35] font-normal">{item.id}</div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#7f5e35]">{item.category}</td>
+                    <td className="py-3.5 px-4 font-bold text-red-700">{item.stock} units</td>
+                    <td className="py-3.5 px-4 font-medium text-[#4f351c]">{item.reorderLevel} units</td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      {item.status === "Out of Stock" || item.stock === 0 ? (
+                        <Badge className="bg-red-50 text-red-700 border-red-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 whitespace-nowrap">
+                          Out of Stock
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-amber-50 text-[#713105] border-amber-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 whitespace-nowrap">
+                          Low Stock
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setRestockingItem(item);
+                          setRestockQty(25);
+                          setSupplierNote("Supplier Restock Purchase Shipment");
+                        }}
+                        className="bg-[#713105] text-[#fff7e8] hover:bg-[#4f351c] text-[11px] rounded-lg px-3 py-1 font-semibold cursor-pointer"
+                      >
+                        Restock SKU
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </CardContent>
       </Card>
+
+      {/* Restock Supplier Modal */}
+      {restockingItem && (
+        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl border border-[#e8decf] shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-5 border-b border-[#e8decf] flex items-center justify-between bg-[#fff7e8]">
+              <h2 className="font-bold text-sm text-[#341100] flex items-center gap-2">
+                <PlusCircle className="w-4 h-4 text-[#713105]" />
+                Receive Supplier Shipment Restock
+              </h2>
+              <button
+                onClick={() => setRestockingItem(null)}
+                className="text-[#7f5e35] hover:text-[#341100] p-1 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmRestock} className="p-6 space-y-4 text-xs">
+              <div className="p-3 bg-[#fff7e8] border border-[#e8decf] rounded-xl flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-[#341100]">{restockingItem.name}</p>
+                  <p className="text-[11px] font-mono text-[#7f5e35]">SKU: {restockingItem.sku}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[11px] text-[#7f5e35]">Current Stock:</span>
+                  <p className="text-sm font-bold text-red-700">{restockingItem.stock} units</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#4f351c] mb-1">Restock Quantity (Units)</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={restockQty}
+                  onChange={(e) => setRestockQty(Number(e.target.value))}
+                  className="bg-[#fff7e8] border-[#e8decf] rounded-xl text-xs font-bold text-[#341100]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#4f351c] mb-1">Supplier Shipment Note / PO #</label>
+                <Input
+                  value={supplierNote}
+                  onChange={(e) => setSupplierNote(e.target.value)}
+                  className="bg-[#fff7e8] border-[#e8decf] rounded-xl text-xs"
+                  required
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-[#e8decf]">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRestockingItem(null)}
+                  className="border-[#e8decf] text-[#7f5e35] text-xs rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="bg-[#713105] text-[#fff7e8] hover:bg-[#4f351c] text-xs font-semibold rounded-xl px-4 py-2 cursor-pointer"
+                >
+                  {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Check className="w-3.5 h-3.5 mr-1" />}
+                  Confirm Supplier Restock
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -14,13 +14,44 @@ import {
   AlertTriangle,
   History,
   Boxes,
+  LogOut,
 } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { getCurrentUserAction, signOutAction } from "@/app/actions/auth";
 
 export function MainSidebar() {
   const pathname = usePathname();
+  const [userProfile, setUserProfile] = useState<{
+    name: string;
+    role: string;
+    initials: string;
+    email: string;
+  } | null>(null);
 
   const isAdminPortal = pathname.startsWith("/admin");
   const isInventoryPortal = pathname.startsWith("/inventory");
+
+  const currentRoleName = isAdminPortal
+    ? "Admin"
+    : isInventoryPortal
+    ? "Inventory"
+    : "Sales";
+
+  useEffect(() => {
+    async function loadUser() {
+      const res = await getCurrentUserAction();
+      if (res.authenticated && res.user) {
+        setUserProfile({
+          name: res.user.name,
+          role: res.user.role,
+          initials: res.user.initials,
+          email: res.user.email || "",
+        });
+      }
+    }
+    loadUser();
+  }, []);
 
   const isOverviewActive =
     pathname === "/" ||
@@ -48,7 +79,7 @@ export function MainSidebar() {
             MINI-ERP
           </Link>
           <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#fff7e8] border border-[#e8decf] text-[#713105]">
-            {isAdminPortal ? "Admin" : isInventoryPortal ? "Inventory" : "Sales"}
+            {userProfile?.role || currentRoleName}
           </span>
         </div>
 
@@ -367,44 +398,37 @@ export function MainSidebar() {
         </div>
       </div>
 
-      {/* Portal Switcher Dropdown Footer */}
-      <div className="p-3 border-t border-[#e8decf] bg-[#fff7e8]/60 shrink-0 space-y-1">
-        <span className="text-[10px] font-bold text-[#7f5e35] uppercase px-1 block">
-          Switch ERP Role Portal
-        </span>
-        <div className="grid grid-cols-3 gap-1">
-          <Link
-            href="/admin/dashboard"
-            className={`text-[10px] font-semibold text-center py-1 px-1 rounded-md border transition-all ${
-              isAdminPortal
-                ? "bg-[#713105] text-[#fff7e8] border-[#713105]"
-                : "bg-white text-[#4f351c] border-[#e8decf] hover:bg-[#fff7e8]"
-            }`}
-          >
-            Admin
-          </Link>
-          <Link
-            href="/sales/overview"
-            className={`text-[10px] font-semibold text-center py-1 px-1 rounded-md border transition-all ${
-              !isAdminPortal && !isInventoryPortal
-                ? "bg-[#713105] text-[#fff7e8] border-[#713105]"
-                : "bg-white text-[#4f351c] border-[#e8decf] hover:bg-[#fff7e8]"
-            }`}
-          >
-            Sales
-          </Link>
-          <Link
-            href="/inventory/overview"
-            className={`text-[10px] font-semibold text-center py-1 px-1 rounded-md border transition-all ${
-              isInventoryPortal
-                ? "bg-[#713105] text-[#fff7e8] border-[#713105]"
-                : "bg-white text-[#4f351c] border-[#e8decf] hover:bg-[#fff7e8]"
-            }`}
-          >
-            Inventory
-          </Link>
+      {/* Logged-In User Profile & Sign Out Footer */}
+      <div className="p-3 border-t border-[#e8decf] bg-[#fff7e8]/60 shrink-0 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 overflow-hidden">
+          <Avatar className="w-8 h-8 border border-[#e8decf] shrink-0">
+            <AvatarFallback className="bg-[#713105] text-[#fff7e8] text-xs font-bold">
+              {userProfile?.initials || "EM"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="truncate">
+            <div className="text-xs font-semibold text-[#341100] truncate">
+              {userProfile?.name || "Staff Member"}
+            </div>
+            <div className="text-[10px] text-[#7f5e35] truncate">
+              {userProfile?.role || currentRoleName} Portal
+            </div>
+          </div>
         </div>
+
+        <form action={signOutAction}>
+          <Button
+            type="submit"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-[#713105] hover:bg-[#fcf3e3] hover:text-[#341100] rounded-lg shrink-0 cursor-pointer"
+            title="Sign Out of Session"
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
+        </form>
       </div>
     </aside>
   );
 }
+

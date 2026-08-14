@@ -7,3 +7,5 @@
 
 5. Always depend on the `DESIGN.md` if you are going to implement something in user interface.
 6. If i'm asking a suggestions or recommendations, always provide 3 or more options.
+7. Read the `MEMORY.md` so that you have context.
+8. Use shadcn for UI component.

@@ -56,7 +56,8 @@ const initialOrders = [
 ];
 
 export function SalesOrdersPage() {
-  const [orders, setOrders] = useState(initialOrders);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -66,22 +67,58 @@ export function SalesOrdersPage() {
   const [quantity, setQuantity] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("Credit Card");
 
-  const handleCreateOrder = (e: React.FormEvent) => {
+  React.useEffect(() => {
+    async function loadDbOrders() {
+      setIsLoadingData(true);
+      const { fetchOrdersAction } = await import("@/app/actions/orders");
+      const res = await fetchOrdersAction();
+      if (res.success && Array.isArray(res.data)) {
+        const mapped = res.data.map((o: any) => ({
+          id: o.order_number || `#ORD-${o.id.slice(0, 4)}`,
+          customer: o.customer_name,
+          date: new Date(o.order_date).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }),
+          items: o.item_count,
+          total: `$${Number(o.total_amount).toFixed(2)}`,
+          payment: o.payment_method,
+          status: o.status,
+        }));
+        setOrders(mapped);
+      } else {
+        setOrders([]);
+      }
+      setIsLoadingData(false);
+    }
+    loadDbOrders();
+  }, []);
+
+  const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName) return;
 
+    const unitPrice = selectedProduct.includes("Vase") ? 48.00 : selectedProduct.includes("Lamp") ? 125.00 : 34.50;
     const newOrder = {
       id: `#ORD-${1043 + orders.length}`,
       customer: customerName,
       date: "Aug 09, 2026",
       items: Number(quantity),
-      total: `$${(Number(quantity) * 48).toFixed(2)}`,
+      total: `$${(Number(quantity) * unitPrice).toFixed(2)}`,
       payment: paymentMethod,
       status: "Pending",
     };
 
     setOrders([newOrder, ...orders]);
     setIsModalOpen(false);
+
+    // Call server action for Supabase DB
+    const { createOrderAction } = await import("@/app/actions/orders");
+    await createOrderAction({
+      customerName,
+      productName: selectedProduct,
+      quantity: Number(quantity),
+      paymentMethod,
+      unitPrice,
+    });
+
     setCustomerName("");
     setQuantity(1);
   };
@@ -199,8 +236,52 @@ export function SalesOrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e8decf]/60">
-              {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-[#fcf3e3]/50 transition-colors">
+              {isLoadingData ? (
+                [...Array(5)].map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="py-3.5 px-4">
+                      <div className="w-16 h-3 bg-[#e8decf]/60 rounded-md" />
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="w-28 h-3 bg-[#e8decf]/70 rounded-md" />
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="w-20 h-3 bg-[#e8decf]/60 rounded-md" />
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="w-14 h-3 bg-[#e8decf]/60 rounded-md" />
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="w-16 h-3 bg-[#e8decf]/60 rounded-md" />
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="w-20 h-3 bg-[#e8decf]/60 rounded-md" />
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="w-16 h-5 bg-[#e8decf]/60 rounded-full" />
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="w-20 h-6 bg-[#e8decf]/60 rounded-lg ml-auto" />
+                    </td>
+                  </tr>
+                ))
+              ) : filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-xs text-[#7f5e35]">
+                    <div className="max-w-xs mx-auto space-y-2">
+                      <ShoppingCart className="w-8 h-8 text-[#cfab71] mx-auto opacity-70" />
+                      <p className="font-semibold text-[#341100]">No Sales Orders Found</p>
+                      <p className="text-[11px] text-[#7f5e35]">
+                        {searchTerm
+                          ? "No orders match your search query."
+                          : "No sales orders recorded in the database yet."}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-[#fcf3e3]/50 transition-colors">
                   <td className="py-3.5 px-4 font-mono font-bold text-[#713105]">{order.id}</td>
                   <td className="py-3.5 px-4 font-medium text-[#341100]">{order.customer}</td>
                   <td className="py-3.5 px-4 text-[#7f5e35]">{order.date}</td>
@@ -231,7 +312,7 @@ export function SalesOrdersPage() {
                     </Button>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </CardContent>

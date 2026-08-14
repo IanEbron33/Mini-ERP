@@ -40,14 +40,27 @@ All UI components strictly adhere to the warm coffee/espresso color palette:
 
 ## 4. Key Features & Capabilities Completed
 
-### 1. Sales & Orders Management Suite ([app/admin/sales/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/sales/page.tsx) & [app/sales/orders/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/sales/orders/page.tsx))
+### 1. Dynamic Admin Dashboard & Real-Time Analytics ([app/admin/dashboard/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/dashboard/page.tsx))
+* **Live KPI Aggregations ([components/kpi-card.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/kpi-card.tsx))**:
+  * Real-time Total Sales Revenue, Active Catalog Products, Low-Stock Alerts, and Active Staff counts backed by `fetchDashboardMetricsAction` ([app/actions/dashboard.ts](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/actions/dashboard.ts)).
+  * Dynamic month-over-month growth calculations and animated shimmer skeleton loaders.
+* **Dynamic 6-Month Revenue Chart ([components/revenue-bar-chart.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/revenue-bar-chart.tsx))**:
+  * Rolling 6-month monthly revenue & volume distribution from actual Supabase `orders` with Bar / Area chart switching.
+* **Category Sales Distribution Donut ([components/category-pie-chart.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/category-pie-chart.tsx))**:
+  * Calculates actual customer sales revenue generated per category with floating hover tooltips and non-colliding center total count.
+* **Recent Activity Feeds**:
+  * Live Recent Orders feed with status badges and 1-click invoice modal preview.
+  * Critical Low-Stock Alerts with direct navigation to Inventory.
+  * Live date banner with manual data refresh button.
+
+### 2. Sales & Orders Management Suite ([app/admin/sales/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/sales/page.tsx) & [app/sales/orders/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/sales/orders/page.tsx))
 * **Dual Pricing Tiers (Retail & Wholesale)**: Side-by-side pricing tier cards with 1-click active tier selection and dynamic total calculation (`Quantity × Selected Tier Price`).
 * **Max Stock Limit Guard & Validation**: Real-time validation preventing orders exceeding warehouse stock with amber/red badge alerts.
-* **Custom Shadcn Select Primitives ([components/ui/select.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/ui/select.tsx))**: Replaced native browser selects with custom Shadcn select dropdowns with React Portal rendering and smart auto-flipping.
-* **Custom Delete Confirmation Dialog ([components/delete-confirm-modal.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/delete-confirm-modal.tsx))**: Reusable coffee-themed modal replacing default `window.confirm()`.
-* **Automated Stock Deduction & Cancel Restocking**: Real-time stock decrement on order creation and automatic inventory restoration with audit logs on cancellation.
+* **Custom Shadcn Select Primitives ([components/ui/select.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/ui/select.tsx))**: Custom select dropdowns with React Portal rendering and smart auto-flipping.
+* **Custom Delete Confirmation Dialog ([components/delete-confirm-modal.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/delete-confirm-modal.tsx))**: Reusable coffee-themed modal.
+* **Automated Stock Deduction & Cancel Restocking**: Real-time stock decrement on order creation and automatic inventory restoration on cancellation.
 
-### 2. Invoice Preview, Printing & 1-Click PDF Export ([components/invoice-modal.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/invoice-modal.tsx))
+### 3. Invoice Preview, Printing & 1-Click PDF Export ([components/invoice-modal.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/invoice-modal.tsx))
 * **Live Product & SKU Data Binding**: Relational join (`*, order_items(*, products(*))`) binding exact product names and catalog SKUs to itemized invoice rows.
 * **Dynamic "Issued By" Role Attribution**:
   * Admin Portal: Displays `Issued By: System Administrator` (`Administrator Portal`).
@@ -55,7 +68,7 @@ All UI components strictly adhere to the warm coffee/espresso color palette:
 * **Direct 1-Click PDF Download (`html-to-image` + `jsPDF`)**: Client-side PDF generation that directly downloads `Invoice-ORD-XXXX.pdf` without opening the print dialog, immune to CSS color parser issues.
 * **Isolated 1-Page Portrait Printing**: `@media print` isolation hiding all background web app UI (sidebar, header, tables) to generate a single clean sheet.
 
-### 3. Inventory & Product Suite ([app/inventory/catalog/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/catalog/page.tsx))
+### 4. Inventory & Product Suite ([app/inventory/catalog/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/catalog/page.tsx))
 * **Shared Product Directory**: Reused directly by Admin (`/admin/inventory`) and Inventory Manager (`/inventory/catalog`).
 * **View Mode Switcher**: Toggle between Table View and Visual Card Grid View.
 * **Interactive Image Upload**: Multi-format image dropzone (`.png`, `.jpg`, `.jpeg`, `.webp`) with Base64 preview and Supabase Storage bucket upload.
@@ -63,12 +76,12 @@ All UI components strictly adhere to the warm coffee/espresso color palette:
 * **Low Stock & Restock Workflow** ([app/inventory/low-stock/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/low-stock/page.tsx)): Filtered low-stock directory with 1-click supplier restock modal.
 * **Stock Movement Audit Trail** ([app/inventory/stock-logs/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/stock-logs/page.tsx)): Audit log tracking all stock additions and deductions.
 
-### 4. User Management & Administration ([app/admin/users/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/users/page.tsx))
+### 5. User Management & Administration ([app/admin/users/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/users/page.tsx))
 * **Admin Staff Registration**: Admin-only staff creation via Supabase Service Role client (`registerEmployeeAction`).
 * **Role & Account Management**: Edit staff role, activate/deactivate account, password reset links, and account deletion.
 * **Multi-Criteria Filter Popover**: Role, Status, and Search filtering with active filter pills.
 
-### 5. Global Feedback & UI Enhancements
+### 6. Global Feedback & UI Enhancements
 * **Sonner Toast System ([components/ui/sonner.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/ui/sonner.tsx))**: Real-time feedback across all actions.
 * **Skeleton Loading States**: Shimmer loading rows eliminating visual flashes.
 * **Strict Vector Icons**: Exclusively uses `lucide-react` vector icons (no emojis).

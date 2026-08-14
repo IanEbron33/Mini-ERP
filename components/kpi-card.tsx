@@ -1,88 +1,82 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { TrendingUp, Package, AlertTriangle, Users } from "lucide-react";
+import { TrendingUp, TrendingDown, Package, AlertTriangle, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { fetchOrdersAction } from "@/app/actions/orders";
-import { fetchProductsAction } from "@/app/actions/products";
-import { fetchProfilesAction } from "@/app/actions/users";
+import { fetchDashboardMetricsAction, DashboardMetrics } from "@/app/actions/dashboard";
 
-export function KpiCardsSection() {
-  const [stats, setStats] = useState({
-    totalSales: 0,
-    totalProducts: 0,
-    categoriesCount: 0,
-    lowStockCount: 0,
-    activeStaffCount: 0,
-    isLoading: true,
-  });
+interface KpiCardsSectionProps {
+  metrics?: DashboardMetrics;
+  isLoading?: boolean;
+}
+
+export function KpiCardsSection({ metrics: propMetrics, isLoading: propIsLoading }: KpiCardsSectionProps) {
+  const [internalMetrics, setInternalMetrics] = useState<DashboardMetrics | null>(null);
+  const [internalLoading, setInternalLoading] = useState(true);
 
   useEffect(() => {
-    async function loadKpiData() {
-      try {
-        const [ordersRes, productsRes, profilesRes] = await Promise.all([
-          fetchOrdersAction(),
-          fetchProductsAction(),
-          fetchProfilesAction(),
-        ]);
-
-        const orders = ordersRes.success && Array.isArray(ordersRes.data) ? ordersRes.data : [];
-        const products = productsRes.success && Array.isArray(productsRes.data) ? productsRes.data : [];
-        const profiles = profilesRes.success && Array.isArray(profilesRes.data) ? profilesRes.data : [];
-
-        const totalSales = orders
-          .filter((o: any) => o.status !== "Cancelled")
-          .reduce((sum: number, o: any) => sum + Number(o.total_amount || 0), 0);
-
-        const categories = new Set(products.map((p: any) => p.category).filter(Boolean));
-        const lowStock = products.filter(
-          (p: any) => (p.stock_quantity ?? 0) <= (p.reorder_level ?? 10)
-        ).length;
-
-        const activeStaff = profiles.filter((p: any) => p.status === "Active" || !p.status).length;
-
-        setStats({
-          totalSales: totalSales > 0 ? totalSales : 124592, // fallback to baseline if empty
-          totalProducts: products.length > 0 ? products.length : 482,
-          categoriesCount: categories.size > 0 ? categories.size : 12,
-          lowStockCount: products.length > 0 ? lowStock : 14,
-          activeStaffCount: profiles.length > 0 ? activeStaff : 8,
-          isLoading: false,
-        });
-      } catch (e) {
-        setStats((prev) => ({ ...prev, isLoading: false }));
-      }
+    if (propMetrics) {
+      setInternalMetrics(propMetrics);
+      setInternalLoading(false);
+      return;
     }
-    loadKpiData();
-  }, []);
+
+    async function loadData() {
+      const res = await fetchDashboardMetricsAction();
+      if (res.success && res.data) {
+        setInternalMetrics(res.data);
+      }
+      setInternalLoading(false);
+    }
+    loadData();
+  }, [propMetrics]);
+
+  const metrics = propMetrics || internalMetrics;
+  const isLoading = propIsLoading !== undefined ? propIsLoading : internalLoading;
+
+  if (isLoading || !metrics) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="border-[#e8decf] shadow-xs rounded-2xl bg-white p-5 animate-pulse">
+            <div className="flex justify-between items-center mb-3">
+              <div className="h-3 w-20 bg-[#fff7e8] rounded-md" />
+              <div className="w-4 h-4 bg-[#fff7e8] rounded-full" />
+            </div>
+            <div className="h-8 w-32 bg-[#fff7e8] rounded-md mb-3" />
+            <div className="h-4 w-24 bg-[#fff7e8] rounded-md" />
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   const kpis = [
     {
-      title: "TOTAL SALES",
-      value: stats.isLoading
-        ? "..."
-        : `$${stats.totalSales.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      trend: "+12.5%",
+      title: "TOTAL SALES REVENUE",
+      value: `$${metrics.totalSales.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      trend: metrics.salesTrend,
+      isPositive: metrics.isPositiveTrend,
       icon: TrendingUp,
     },
     {
-      title: "TOTAL PRODUCTS",
-      value: stats.isLoading ? "..." : `${stats.totalProducts}`,
-      subtext: `Across ${stats.categoriesCount} categories`,
+      title: "TOTAL PRODUCTS IN CATALOG",
+      value: `${metrics.totalProducts}`,
+      subtext: `Across ${metrics.categoriesCount} active ${metrics.categoriesCount === 1 ? "category" : "categories"}`,
       icon: Package,
     },
     {
-      title: "LOW STOCK COUNT",
-      value: stats.isLoading ? "..." : `${stats.lowStockCount}`,
-      alertText: stats.lowStockCount > 0 ? "Requires attention" : "Healthy inventory",
-      isAlert: stats.lowStockCount > 0,
+      title: "LOW STOCK ALERTS",
+      value: `${metrics.lowStockCount}`,
+      alertText: metrics.lowStockCount > 0 ? `${metrics.lowStockCount} Requires Restock` : "Inventory Healthy",
+      isAlert: metrics.lowStockCount > 0,
       icon: AlertTriangle,
     },
     {
-      title: "ACTIVE STAFF COUNT",
-      value: stats.isLoading ? "..." : `${stats.activeStaffCount}`,
-      subtext: "System registered users",
+      title: "ACTIVE SYSTEM USERS",
+      value: `${metrics.activeStaffCount}`,
+      subtext: "Verified staff accounts",
       icon: Users,
     },
   ];
@@ -92,19 +86,21 @@ export function KpiCardsSection() {
       {kpis.map((kpi, index) => (
         <Card
           key={index}
-          className="border-[#e8decf] shadow-xs hover:border-[#cfab71] transition-all rounded-xl bg-white"
+          className="border-[#e8decf] shadow-xs hover:border-[#cfab71] transition-all rounded-2xl bg-white"
         >
           <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-[#7f5e35]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#7f5e35]">
                 {kpi.title}
               </span>
-              <kpi.icon className="w-4 h-4 text-[#713105]/70" />
+              <div className="w-7 h-7 rounded-lg bg-[#fff7e8] flex items-center justify-center border border-[#e8decf]">
+                <kpi.icon className="w-3.5 h-3.5 text-[#713105]" />
+              </div>
             </div>
 
-            <div className="text-2xl font-bold text-[#341100] tracking-tight">
+            <div className="text-2xl font-black text-[#341100] tracking-tight">
               {kpi.isAlert ? (
-                <span className="text-red-700">{kpi.value}</span>
+                <span className="text-[#b91c1c]">{kpi.value}</span>
               ) : (
                 kpi.value
               )}
@@ -113,10 +109,20 @@ export function KpiCardsSection() {
             <div className="pt-1">
               {kpi.trend && (
                 <div className="flex items-center gap-1">
-                  <Badge variant="success" className="text-[11px] font-semibold uppercase tracking-wide gap-1 bg-emerald-50 text-emerald-800 border-emerald-200">
-                    <TrendingUp className="w-3 h-3" />
-                    {kpi.trend}
-                  </Badge>
+                  <span
+                    className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border gap-1 ${
+                      kpi.isPositive
+                        ? "bg-[#ebf5ed] text-[#15803d] border-[#c1e1c7]"
+                        : "bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]"
+                    }`}
+                  >
+                    {kpi.isPositive ? (
+                      <TrendingUp className="w-3 h-3 text-[#15803d]" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3 text-[#b91c1c]" />
+                    )}
+                    {kpi.trend} vs last mo.
+                  </span>
                 </div>
               )}
 
@@ -127,9 +133,16 @@ export function KpiCardsSection() {
               )}
 
               {kpi.alertText && (
-                <Badge variant={kpi.isAlert ? "destructive" : "success"} className="text-[11px] font-semibold uppercase tracking-wide">
+                <span
+                  className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border gap-1 ${
+                    kpi.isAlert
+                      ? "bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]"
+                      : "bg-[#ebf5ed] text-[#15803d] border-[#c1e1c7]"
+                  }`}
+                >
+                  <AlertTriangle className="w-3 h-3" />
                   {kpi.alertText}
-                </Badge>
+                </span>
               )}
             </div>
           </CardContent>
@@ -138,3 +151,5 @@ export function KpiCardsSection() {
     </div>
   );
 }
+
+export default KpiCardsSection;

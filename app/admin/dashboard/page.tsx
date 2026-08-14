@@ -23,27 +23,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fetchDashboardMetricsAction, DashboardMetrics } from "@/app/actions/dashboard";
 import { InvoiceModal, InvoiceOrderData } from "@/components/invoice-modal";
+import { useSwrData } from "@/lib/cache/swr-cache";
 
 export default function DashboardOverviewPage() {
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    data: metrics,
+    isLoading,
+    isRevalidating,
+    refresh: loadData,
+  } = useSwrData<DashboardMetrics>("admin_dashboard_metrics", fetchDashboardMetricsAction);
 
   // Invoice modal preview state
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceOrderData | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
-
-  const loadData = async () => {
-    setIsLoading(true);
-    const res = await fetchDashboardMetricsAction();
-    if (res.success && res.data) {
-      setMetrics(res.data);
-    }
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const todayDateFormatted = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -98,12 +90,12 @@ export default function DashboardOverviewPage() {
 
             <Button
               onClick={loadData}
-              disabled={isLoading}
+              disabled={isLoading || isRevalidating}
               variant="outline"
               size="sm"
               className="border-[#e8decf] bg-white text-[#713105] hover:bg-[#fff7e8] rounded-xl h-9 px-3 gap-1.5 font-semibold text-xs shadow-2xs"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRevalidating ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">Refresh</span>
             </Button>
           </div>

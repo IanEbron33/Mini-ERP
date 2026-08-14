@@ -21,30 +21,20 @@ import { toast } from "sonner";
 import {
   fetchFinancialLedgerAction,
   FinancialReportData,
-  FinancialLedgerEntry,
 } from "@/app/actions/finance";
+import { useSwrData } from "@/lib/cache/swr-cache";
 
 export function FinancePage() {
-  const [reportData, setReportData] = useState<FinancialReportData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    data: reportData,
+    isLoading,
+    isRevalidating,
+    refresh: loadData,
+  } = useSwrData<FinancialReportData>("admin_finance_ledger", fetchFinancialLedgerAction);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
-
-  const loadData = async () => {
-    setIsLoading(true);
-    const res = await fetchFinancialLedgerAction();
-    if (res.success && res.data) {
-      setReportData(res.data);
-    } else {
-      toast.error(res.error || "Failed to load financial ledger.");
-    }
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const metrics = reportData?.metrics || {
     grossRevenue: 0,
@@ -139,12 +129,12 @@ export function FinancePage() {
           <div className="flex items-center gap-2.5 self-stretch md:self-auto">
             <Button
               onClick={loadData}
-              disabled={isLoading}
+              disabled={isLoading || isRevalidating}
               variant="outline"
               size="sm"
               className="border-[#e8decf] bg-white text-[#713105] hover:bg-[#fff7e8] rounded-xl h-9 px-3 gap-1.5 font-semibold text-xs shadow-2xs"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRevalidating ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">Refresh</span>
             </Button>
 

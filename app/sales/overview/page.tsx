@@ -9,60 +9,52 @@ import { Button } from "@/components/ui/button";
 import { RevenueBarChart } from "@/components/revenue-bar-chart";
 import { fetchOrdersAction } from "@/app/actions/orders";
 import { InvoiceModal, InvoiceOrderData } from "@/components/invoice-modal";
+import { useSwrData } from "@/lib/cache/swr-cache";
 
 export function SalesPerformancePage() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    data: rawOrders,
+    isLoading,
+    isRevalidating,
+    refresh: loadData,
+  } = useSwrData<any[]>("sales_portal_data", fetchOrdersAction);
 
   // Invoice modal state
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceOrderData | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
-  const loadData = async () => {
-    setIsLoading(true);
-    const res = await fetchOrdersAction();
-    if (res.success && Array.isArray(res.data)) {
-      const mapped = res.data.map((o: any) => {
-        const orderItems = o.order_items || [];
-        const firstItem = orderItems[0];
-        const firstProduct = firstItem?.products;
+  const ordersList = Array.isArray(rawOrders) ? rawOrders : [];
+  const orders = ordersList.map((o: any) => {
+    const orderItems = o.order_items || [];
+    const firstItem = orderItems[0];
+    const firstProduct = firstItem?.products;
 
-        return {
-          id: o.order_number || `#ORD-${o.id.slice(0, 4)}`,
-          rawId: o.id,
-          customer: o.customer_name,
-          date: new Date(o.order_date || o.created_at).toLocaleDateString("en-US", {
-            month: "short",
-            day: "2-digit",
-            year: "numeric",
-          }),
-          items: o.item_count,
-          total: `₱${Number(o.total_amount || 0).toFixed(2)}`,
-          payment: o.payment_method,
-          status: o.status,
-          productName: firstProduct?.name || "Catalog Product Item",
-          productSku: firstProduct?.sku || "SKU-AUTO",
-          unitPrice: firstItem?.unit_price || 0,
-          quantity: firstItem?.quantity || o.item_count,
-          orderItems: orderItems.map((item: any) => ({
-            productName: item.products?.name || "Catalog Product Item",
-            sku: item.products?.sku || "SKU-AUTO",
-            quantity: item.quantity,
-            unitPrice: item.unit_price,
-            total: item.quantity * item.unit_price,
-          })),
-        };
-      });
-      setOrders(mapped);
-    } else {
-      setOrders([]);
-    }
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
+    return {
+      id: o.order_number || `#ORD-${o.id.slice(0, 4)}`,
+      rawId: o.id,
+      customer: o.customer_name,
+      date: new Date(o.order_date || o.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+      }),
+      items: o.item_count,
+      total: `₱${Number(o.total_amount || 0).toFixed(2)}`,
+      payment: o.payment_method,
+      status: o.status,
+      productName: firstProduct?.name || "Catalog Product Item",
+      productSku: firstProduct?.sku || "SKU-AUTO",
+      unitPrice: firstItem?.unit_price || 0,
+      quantity: firstItem?.quantity || o.item_count,
+      orderItems: orderItems.map((item: any) => ({
+        productName: item.products?.name || "Catalog Product Item",
+        sku: item.products?.sku || "SKU-AUTO",
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        total: item.quantity * item.unit_price,
+      })),
+    };
+  });
 
   // Performance calculations
   const monthlyQuota = 20000;
@@ -120,11 +112,12 @@ export function SalesPerformancePage() {
           <div className="flex items-center gap-3">
             <Button
               onClick={loadData}
+              disabled={isLoading || isRevalidating}
               variant="outline"
               size="sm"
               className="border-[#e8decf] text-[#4f351c] hover:bg-[#fff7e8] rounded-xl text-xs gap-1.5 h-9"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRevalidating ? "animate-spin" : ""}`} />
               Refresh
             </Button>
             <div className="relative w-40">

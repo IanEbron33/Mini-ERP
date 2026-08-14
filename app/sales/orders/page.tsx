@@ -30,14 +30,39 @@ import { fetchProductsAction } from "@/app/actions/products";
 import { InvoiceModal, InvoiceOrderData } from "@/components/invoice-modal";
 import { DeleteConfirmModal } from "@/components/delete-confirm-modal";
 import { Select } from "@/components/ui/select";
+import { useSwrData, invalidateCache } from "@/lib/cache/swr-cache";
+
+interface SalesDataPayload {
+  orders: any[];
+  products: any[];
+}
+
+const fetchSalesPayload = async () => {
+  const [ordersRes, prodsRes] = await Promise.all([
+    fetchOrdersAction(),
+    fetchProductsAction(),
+  ]);
+
+  return {
+    success: true,
+    data: {
+      orders: ordersRes.success && Array.isArray(ordersRes.data) ? ordersRes.data : [],
+      products: prodsRes.success && Array.isArray(prodsRes.data) ? prodsRes.data : [],
+    },
+  };
+};
 
 function SalesOrdersContent() {
   const searchParams = useSearchParams();
   const preselectedProductId = searchParams.get("productId");
 
-  const [orders, setOrders] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    data: salesData,
+    isLoading,
+    isRevalidating,
+    refresh: loadData,
+  } = useSwrData<SalesDataPayload>("admin_sales_data", fetchSalesPayload);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,70 +84,52 @@ function SalesOrdersContent() {
   const [paymentMethod, setPaymentMethod] = useState("Credit Card");
   const [pricingTier, setPricingTier] = useState<"retail" | "wholesale">("retail");
 
-  // Load live orders and products from Supabase
-  const loadData = async () => {
-    setIsLoading(true);
-    const [ordersRes, prodsRes] = await Promise.all([
-      fetchOrdersAction(),
-      fetchProductsAction(),
-    ]);
+  const rawOrders = salesData?.orders || [];
+  const products = salesData?.products || [];
 
-    if (ordersRes.success && Array.isArray(ordersRes.data)) {
-      const mapped = ordersRes.data.map((o: any) => {
-        const orderItems = o.order_items || [];
-        const firstItem = orderItems[0];
-        const firstProduct = firstItem?.products;
+  const orders = rawOrders.map((o: any) => {
+    const orderItems = o.order_items || [];
+    const firstItem = orderItems[0];
+    const firstProduct = firstItem?.products;
 
-        return {
-          id: o.order_number || `#ORD-${o.id.slice(0, 4)}`,
-          rawId: o.id,
-          customer: o.customer_name,
-          date: new Date(o.order_date || o.created_at).toLocaleDateString("en-US", {
-            month: "short",
-            day: "2-digit",
-            year: "numeric",
-          }),
-          items: o.item_count,
-          total: `₱${Number(o.total_amount || 0).toFixed(2)}`,
-          payment: o.payment_method,
-          status: o.status,
-          productName: firstProduct?.name || "Catalog Product Item",
-          productSku: firstProduct?.sku || "SKU-AUTO",
-          unitPrice: firstItem?.unit_price || 0,
-          quantity: firstItem?.quantity || o.item_count,
-          orderItems: orderItems.map((item: any) => ({
-            productName: item.products?.name || "Catalog Product Item",
-            sku: item.products?.sku || "SKU-AUTO",
-            quantity: item.quantity,
-            unitPrice: item.unit_price,
-            total: item.quantity * item.unit_price,
-          })),
-        };
-      });
-      setOrders(mapped);
-    } else {
-      setOrders([]);
-    }
-
-    if (prodsRes.success && Array.isArray(prodsRes.data)) {
-      setProducts(prodsRes.data);
-      if (preselectedProductId) {
-        const matched = prodsRes.data.find((p) => p.id === preselectedProductId);
-        if (matched) {
-          setSelectedProductId(matched.id);
-          setIsModalOpen(true);
-        }
-      } else if (prodsRes.data.length > 0 && !selectedProductId) {
-        setSelectedProductId(prodsRes.data[0].id);
-      }
-    }
-
-    setIsLoading(false);
-  };
+    return {
+      id: o.order_number || `#ORD-${o.id.slice(0, 4)}`,
+      rawId: o.id,
+      customer: o.customer_name,
+      date: new Date(o.order_date || o.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+      }),
+      items: o.item_count,
+      total: `₱${Number(o.total_amount || 0).toFixed(2)}`,
+      payment: o.payment_method,
+      status: o.status,
+      productName: firstProduct?.name || "Catalog Product Item",
+      productSku: firstProduct?.sku || "SKU-AUTO",
+      unitPrice: firstItem?.unit_price || 0,
+      quantity: firstItem?.quantity || o.item_count,
+      orderItems: orderItems.map((item: any) => ({
+        productName: item.products?.name || "Catalog Product Item",
+        sku: item.products?.sku || "SKU-AUTO",
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        total: item.quantity * item.unit_price,
+      })),
+    };
+  });
 
   useEffect(() => {
-    loadData();
-  }, [preselectedProductId]);
+    if (preselectedProductId && products.length > 0) {
+      const matched = products.find((p) => p.id === preselectedProductId);
+      if (matched) {
+        setSelectedProductId(matched.id);
+        setIsModalOpen(true);
+      }
+    } else if (products.length > 0 && !selectedProductId) {
+      setSelectedProductId(products[0].id);
+    }
+  }, [products, preselectedProductId, selectedProductId]);
 
   // Selected product object
   const currentSelectedProduct = products.find((p) => p.id === selectedProductId) || products[0];
@@ -184,6 +191,7 @@ function SalesOrdersContent() {
       setIsModalOpen(false);
       setCustomerName("");
       setQuantity(1);
+      invalidateCache(["admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "catalog_products", "sales_portal_data"]);
       await loadData();
     } else {
       toast.error(res.error || "Failed to create sales order.");
@@ -195,9 +203,8 @@ function SalesOrdersContent() {
     const res = await updateOrderStatusAction(orderId, newStatus, "Sales Representative");
     if (res.success) {
       toast.success(res.message);
-      setOrders((prev) =>
-        prev.map((o) => (o.rawId === orderId ? { ...o, status: newStatus } : o))
-      );
+      invalidateCache(["admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
+      await loadData();
     } else {
       toast.error(res.error || "Failed to update status.");
     }
@@ -214,8 +221,9 @@ function SalesOrdersContent() {
     const res = await deleteOrderAction(deleteOrderId, "Sales Representative");
     if (res.success) {
       toast.success(res.message);
-      setOrders((prev) => prev.filter((o) => o.rawId !== deleteOrderId));
+      invalidateCache(["admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "catalog_products", "sales_portal_data"]);
       setDeleteOrderId(null);
+      await loadData();
     } else {
       toast.error(res.error || "Failed to delete order.");
     }
@@ -288,11 +296,12 @@ function SalesOrdersContent() {
           <div className="flex items-center gap-3">
             <Button
               onClick={loadData}
+              disabled={isLoading || isRevalidating}
               variant="outline"
               size="sm"
               className="border-[#e8decf] text-[#4f351c] hover:bg-[#fff7e8] rounded-xl text-xs gap-1.5 h-9"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRevalidating ? "animate-spin" : ""}`} />
               Refresh
             </Button>
             <Button

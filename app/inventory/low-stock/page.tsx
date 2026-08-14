@@ -1,16 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Filter, AlertTriangle, PlusCircle, ArrowUpRight, Check, X, Loader2, Package } from "lucide-react";
+import { Search, Filter, AlertTriangle, PlusCircle, ArrowUpRight, Check, X, Loader2, Package, RefreshCw } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fetchProductsAction, adjustStockAction } from "@/app/actions/products";
+import { useSwrData, invalidateCache } from "@/lib/cache/swr-cache";
 
 export function LowStockRestockPage() {
-  const [items, setItems] = useState<any[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const {
+    data: rawProducts,
+    isLoading: isLoadingData,
+    isRevalidating,
+    refresh: loadLowStockProducts,
+  } = useSwrData<any[]>("catalog_products", fetchProductsAction);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
@@ -20,33 +26,21 @@ export function LowStockRestockPage() {
   const [supplierNote, setSupplierNote] = useState("Supplier Purchase Shipment Order");
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    async function loadLowStockProducts() {
-      setIsLoadingData(true);
-      const res = await fetchProductsAction();
-      if (res.success && Array.isArray(res.data)) {
-        const mapped = res.data
-          .filter((p: any) => p.stock_quantity <= p.reorder_level)
-          .map((p: any) => ({
-            id: p.product_code || `PRD-${p.id.slice(0, 4)}`,
-            dbId: p.id,
-            name: p.name,
-            category: p.category,
-            sku: p.sku,
-            stock: p.stock_quantity,
-            reorderLevel: p.reorder_level,
-            retailPrice: `₱${Number(p.retail_price).toFixed(2)}`,
-            supplier: "Artisan Crafts Supplier",
-            status: p.status,
-          }));
-        setItems(mapped);
-      } else {
-        setItems([]);
-      }
-      setIsLoadingData(false);
-    }
-    loadLowStockProducts();
-  }, []);
+  const allProducts = Array.isArray(rawProducts) ? rawProducts : [];
+  const items = allProducts
+    .filter((p: any) => p.stock_quantity <= p.reorder_level)
+    .map((p: any) => ({
+      id: p.product_code || `PRD-${p.id.slice(0, 4)}`,
+      dbId: p.id,
+      name: p.name,
+      category: p.category,
+      sku: p.sku,
+      stock: p.stock_quantity,
+      reorderLevel: p.reorder_level,
+      retailPrice: `₱${Number(p.retail_price).toFixed(2)}`,
+      supplier: "Artisan Crafts Supplier",
+      status: p.status,
+    }));
 
   const handleConfirmRestock = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,13 +67,9 @@ export function LowStockRestockPage() {
         message: `Restocked ${restockQty} units of ${restockingItem.name}. New Stock: ${newStock} units.`,
       });
 
-      // Remove from low stock list if it's now above reorder level
-      if (newStock > restockingItem.reorderLevel) {
-        setItems(items.filter((i) => i.id !== restockingItem.id));
-      } else {
-        setItems(items.map((i) => (i.id === restockingItem.id ? { ...i, stock: newStock } : i)));
-      }
       setRestockingItem(null);
+      invalidateCache(["catalog_products", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
+      await loadLowStockProducts();
     } else {
       setFeedback({ type: "error", message: res.error || "Failed to restock SKU." });
     }
@@ -119,7 +109,7 @@ export function LowStockRestockPage() {
         <CardContent className="p-0 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Badge className="bg-[#fcf3e3] text-[#713105] border-[#cfab71]/50 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5">
+              <Badge className="bg-[#fcf3e3] text-[#713105] border-[#cfab71]/50 text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5">
                 Inventory Manager Portal
               </Badge>
             </div>
@@ -129,6 +119,19 @@ export function LowStockRestockPage() {
             <p className="text-xs font-normal text-[#7f5e35] mt-1">
               Live action list highlighting products currently at or below reorder level.
             </p>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <Button
+              onClick={loadLowStockProducts}
+              disabled={isLoadingData || isRevalidating}
+              variant="outline"
+              size="sm"
+              className="border-[#e8decf] bg-white text-[#713105] hover:bg-[#fff7e8] rounded-xl h-9 px-3 gap-1.5 font-semibold text-xs shadow-2xs"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRevalidating ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
           </div>
         </CardContent>
       </Card>

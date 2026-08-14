@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Search, Filter, Plus, Package, AlertTriangle, Image as ImageIcon, X, Check, Edit2, Upload, PlusCircle, MinusCircle, Trash2, ArrowUpDown, Loader2, AlertCircle, LayoutList, LayoutGrid } from "lucide-react";
+import { Search, Filter, Plus, Package, AlertTriangle, Image as ImageIcon, X, Check, Edit2, Upload, PlusCircle, MinusCircle, Trash2, ArrowUpDown, Loader2, AlertCircle, LayoutList, LayoutGrid, RefreshCw } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   deleteProductAction,
   uploadProductImageAction,
 } from "@/app/actions/products";
+import { useSwrData, invalidateCache } from "@/lib/cache/swr-cache";
 
 const initialCatalog = [
   {
@@ -25,8 +26,8 @@ const initialCatalog = [
     sku: "HD-VASE-001",
     stock: 45,
     reorderLevel: 10,
-    retailPrice: "$48.00",
-    wholesalePrice: "$32.00",
+    retailPrice: "₱48.00",
+    wholesalePrice: "₱32.00",
     status: "In Stock",
     image: "ceramic_vase.jpg",
   },
@@ -96,8 +97,14 @@ function ProductsCatalogContent() {
   const searchParams = useSearchParams();
   const filterQuery = searchParams.get("filter");
 
+  const {
+    data: rawDbProducts,
+    isLoading: isLoadingData,
+    isRevalidating,
+    refresh: loadDbProducts,
+  } = useSwrData<any[]>("catalog_products", fetchProductsAction);
+
   const [catalog, setCatalog] = useState<any[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTabFilter, setActiveTabFilter] = useState(filterQuery === "low_stock" ? "low_stock" : "all");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
@@ -186,31 +193,23 @@ function ProductsCatalogContent() {
   }, [filterQuery]);
 
   useEffect(() => {
-    async function loadDbProducts() {
-      setIsLoadingData(true);
-      const res = await fetchProductsAction();
-      if (res.success && Array.isArray(res.data)) {
-        const mapped = res.data.map((p: any) => ({
-          id: p.product_code || `PRD-${p.id.slice(0, 4)}`,
-          dbId: p.id,
-          name: p.name,
-          category: p.category,
-          sku: p.sku,
-          stock: p.stock_quantity,
-          reorderLevel: p.reorder_level,
-          retailPrice: `₱${Number(p.retail_price).toFixed(2)}`,
-          wholesalePrice: `₱${Number(p.wholesale_price).toFixed(2)}`,
-          status: p.status,
-          image: p.image_url || "product_img.jpg",
-        }));
-        setCatalog(mapped);
-      } else {
-        setCatalog([]);
-      }
-      setIsLoadingData(false);
+    if (rawDbProducts && Array.isArray(rawDbProducts)) {
+      const mapped = rawDbProducts.map((p: any) => ({
+        id: p.product_code || `PRD-${p.id.slice(0, 4)}`,
+        dbId: p.id,
+        name: p.name,
+        category: p.category,
+        sku: p.sku,
+        stock: p.stock_quantity,
+        reorderLevel: p.reorder_level,
+        retailPrice: `₱${Number(p.retail_price).toFixed(2)}`,
+        wholesalePrice: `₱${Number(p.wholesale_price).toFixed(2)}`,
+        status: p.status,
+        image: p.image_url || "product_img.jpg",
+      }));
+      setCatalog(mapped);
     }
-    loadDbProducts();
-  }, []);
+  }, [rawDbProducts]);
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,6 +259,8 @@ function ProductsCatalogContent() {
       setWholesalePrice("");
       setImageFileName("");
       setImagePreviewUrl("");
+      invalidateCache(["catalog_products", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
+      await loadDbProducts();
     } else {
       toast.error(res.error || "Failed to add product SKU.");
       setFeedback({ type: "error", message: res.error || "Failed to add product." });
@@ -315,6 +316,8 @@ function ProductsCatalogContent() {
       toast.success(`Product SKU "${editName}" updated successfully.`);
       setFeedback({ type: "success", message: res.message || "Product SKU updated successfully." });
       setEditingProduct(null);
+      invalidateCache(["catalog_products", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
+      await loadDbProducts();
     } else {
       toast.error(res.error || "Failed to update product SKU.");
       setFeedback({ type: "error", message: res.error || "Failed to update product." });
@@ -356,6 +359,8 @@ function ProductsCatalogContent() {
       toast.success(`Stock level for "${adjustingProduct.name}" updated to ${newStock} units.`);
       setFeedback({ type: "success", message: res.message || `Stock for ${adjustingProduct.name} updated to ${newStock} units.` });
       setAdjustingProduct(null);
+      invalidateCache(["catalog_products", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
+      await loadDbProducts();
     } else {
       toast.error(res.error || "Failed to adjust stock.");
       setFeedback({ type: "error", message: res.error || "Failed to adjust stock." });
@@ -375,6 +380,8 @@ function ProductsCatalogContent() {
       toast.success(`Product SKU "${deletingProduct.sku}" permanently deleted.`);
       setFeedback({ type: "success", message: res.message || "Product SKU deleted successfully." });
       setDeletingProduct(null);
+      invalidateCache(["catalog_products", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
+      await loadDbProducts();
     } else {
       toast.error(res.error || "Failed to delete product SKU.");
       setFeedback({ type: "error", message: res.error || "Failed to delete product SKU." });
@@ -436,13 +443,25 @@ function ProductsCatalogContent() {
             </p>
           </div>
 
-          <Button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-[#713105] text-[#fff7e8] hover:bg-[#4f351c] gap-2 rounded-xl text-xs font-semibold px-4 py-2 shadow-xs"
-          >
-            <Plus className="w-4 h-4" />
-            Add New SKU / Product
-          </Button>
+          <div className="flex items-center gap-2.5">
+            <Button
+              onClick={loadDbProducts}
+              disabled={isLoadingData || isRevalidating}
+              variant="outline"
+              size="sm"
+              className="border-[#e8decf] bg-white text-[#713105] hover:bg-[#fff7e8] rounded-xl h-9 px-3 gap-1.5 font-semibold text-xs shadow-2xs"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRevalidating ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+            <Button
+              onClick={() => setIsModalOpen(true)}
+              className="bg-[#713105] text-[#fff7e8] hover:bg-[#4f351c] gap-2 rounded-xl text-xs font-semibold px-4 py-2 shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              Add New SKU / Product
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

@@ -26,11 +26,36 @@ import { fetchProductsAction } from "@/app/actions/products";
 import { InvoiceModal, InvoiceOrderData } from "@/components/invoice-modal";
 import { DeleteConfirmModal } from "@/components/delete-confirm-modal";
 import { Select } from "@/components/ui/select";
+import { useSwrData, invalidateCache } from "@/lib/cache/swr-cache";
+
+interface SalesDataPayload {
+  orders: any[];
+  products: any[];
+}
+
+const fetchSalesPayload = async () => {
+  const [ordersRes, prodsRes] = await Promise.all([
+    fetchOrdersAction(),
+    fetchProductsAction(),
+  ]);
+
+  return {
+    success: true,
+    data: {
+      orders: ordersRes.success && Array.isArray(ordersRes.data) ? ordersRes.data : [],
+      products: prodsRes.success && Array.isArray(prodsRes.data) ? prodsRes.data : [],
+    },
+  };
+};
 
 export function AdminSalesPage() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    data: salesData,
+    isLoading,
+    isRevalidating,
+    refresh: loadData,
+  } = useSwrData<SalesDataPayload>("admin_sales_data", fetchSalesPayload);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,63 +77,46 @@ export function AdminSalesPage() {
   const [paymentMethod, setPaymentMethod] = useState("Credit Card");
   const [pricingTier, setPricingTier] = useState<"retail" | "wholesale">("retail");
 
-  const loadData = async () => {
-    setIsLoading(true);
-    const [ordersRes, prodsRes] = await Promise.all([
-      fetchOrdersAction(),
-      fetchProductsAction(),
-    ]);
+  const rawOrders = salesData?.orders || [];
+  const products = salesData?.products || [];
 
-    if (ordersRes.success && Array.isArray(ordersRes.data)) {
-      const mapped = ordersRes.data.map((o: any) => {
-        const orderItems = o.order_items || [];
-        const firstItem = orderItems[0];
-        const firstProduct = firstItem?.products;
+  const orders = rawOrders.map((o: any) => {
+    const orderItems = o.order_items || [];
+    const firstItem = orderItems[0];
+    const firstProduct = firstItem?.products;
 
-        return {
-          id: o.order_number || `#ORD-${o.id.slice(0, 4)}`,
-          rawId: o.id,
-          customer: o.customer_name,
-          date: new Date(o.order_date || o.created_at).toLocaleDateString("en-US", {
-            month: "short",
-            day: "2-digit",
-            year: "numeric",
-          }),
-          items: o.item_count,
-          total: `₱${Number(o.total_amount || 0).toFixed(2)}`,
-          payment: o.payment_method,
-          status: o.status,
-          productName: firstProduct?.name || "Catalog Product Item",
-          productSku: firstProduct?.sku || "SKU-AUTO",
-          unitPrice: firstItem?.unit_price || 0,
-          quantity: firstItem?.quantity || o.item_count,
-          orderItems: orderItems.map((item: any) => ({
-            productName: item.products?.name || "Catalog Product Item",
-            sku: item.products?.sku || "SKU-AUTO",
-            quantity: item.quantity,
-            unitPrice: item.unit_price,
-            total: item.quantity * item.unit_price,
-          })),
-        };
-      });
-      setOrders(mapped);
-    } else {
-      setOrders([]);
-    }
-
-    if (prodsRes.success && Array.isArray(prodsRes.data)) {
-      setProducts(prodsRes.data);
-      if (prodsRes.data.length > 0 && !selectedProductId) {
-        setSelectedProductId(prodsRes.data[0].id);
-      }
-    }
-
-    setIsLoading(false);
-  };
+    return {
+      id: o.order_number || `#ORD-${o.id.slice(0, 4)}`,
+      rawId: o.id,
+      customer: o.customer_name,
+      date: new Date(o.order_date || o.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+      }),
+      items: o.item_count,
+      total: `₱${Number(o.total_amount || 0).toFixed(2)}`,
+      payment: o.payment_method,
+      status: o.status,
+      productName: firstProduct?.name || "Catalog Product Item",
+      productSku: firstProduct?.sku || "SKU-AUTO",
+      unitPrice: firstItem?.unit_price || 0,
+      quantity: firstItem?.quantity || o.item_count,
+      orderItems: orderItems.map((item: any) => ({
+        productName: item.products?.name || "Catalog Product Item",
+        sku: item.products?.sku || "SKU-AUTO",
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        total: item.quantity * item.unit_price,
+      })),
+    };
+  });
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (products.length > 0 && !selectedProductId) {
+      setSelectedProductId(products[0].id);
+    }
+  }, [products, selectedProductId]);
 
   const currentSelectedProduct = products.find((p) => p.id === selectedProductId) || products[0];
   const retailUnitPrice = currentSelectedProduct ? Number(currentSelectedProduct.retail_price || 0) : 0;
@@ -166,6 +174,7 @@ export function AdminSalesPage() {
       setIsModalOpen(false);
       setCustomerName("");
       setQuantity(1);
+      invalidateCache(["admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "catalog_products", "sales_portal_data"]);
       await loadData();
     } else {
       toast.error(res.error || "Failed to create order.");
@@ -177,9 +186,8 @@ export function AdminSalesPage() {
     const res = await updateOrderStatusAction(orderId, newStatus, "Staff Admin");
     if (res.success) {
       toast.success(res.message);
-      setOrders((prev) =>
-        prev.map((o) => (o.rawId === orderId ? { ...o, status: newStatus } : o))
-      );
+      invalidateCache(["admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
+      await loadData();
     } else {
       toast.error(res.error || "Failed to update order status.");
     }
@@ -196,8 +204,9 @@ export function AdminSalesPage() {
     const res = await deleteOrderAction(deleteOrderId, "Staff Admin");
     if (res.success) {
       toast.success(res.message);
-      setOrders((prev) => prev.filter((o) => o.rawId !== deleteOrderId));
+      invalidateCache(["admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "catalog_products", "sales_portal_data"]);
       setDeleteOrderId(null);
+      await loadData();
     } else {
       toast.error(res.error || "Failed to delete order.");
     }
@@ -250,29 +259,30 @@ export function AdminSalesPage() {
         <CardContent className="p-0 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Badge className="bg-[#fcf3e3] text-[#713105] border-[#cfab71]/50 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5">
-                Administrator Portal
+              <Badge className="bg-[#fcf3e3] text-[#713105] border-[#cfab71]/50 text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5">
+                Sales Operations
               </Badge>
-              <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[10px] font-semibold">
-                Live Sales Records
+              <Badge className="bg-[#ebf5ed] text-[#15803d] border-[#c1e1c7] text-[10px] font-semibold">
+                Live Orders
               </Badge>
             </div>
             <h1 className="text-2xl font-bold text-[#341100] tracking-tight">
-              Sales Orders & Invoicing Management
+              Sales Management & Orders
             </h1>
             <p className="text-xs font-normal text-[#7f5e35] mt-1">
-              Admin overview: Track company-wide sales transactions, update order fulfillment states, issue invoices, and manage client orders.
+              Real-time sales tracking, dual tier billing, and customer transaction order fulfillment.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <Button
               onClick={loadData}
+              disabled={isLoading || isRevalidating}
               variant="outline"
               size="sm"
               className="border-[#e8decf] text-[#4f351c] hover:bg-[#fff7e8] rounded-xl text-xs gap-1.5 h-9"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRevalidating ? "animate-spin" : ""}`} />
               Refresh
             </Button>
             <Button

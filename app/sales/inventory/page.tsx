@@ -8,27 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fetchProductsAction } from "@/app/actions/products";
 import Link from "next/link";
+import { useSwrData } from "@/lib/cache/swr-cache";
 
 export function SalesInventoryPage() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    data: rawProducts,
+    isLoading,
+    isRevalidating,
+    refresh: loadProducts,
+  } = useSwrData<any[]>("catalog_products", fetchProductsAction);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
-  const loadProducts = async () => {
-    setIsLoading(true);
-    const res = await fetchProductsAction();
-    if (res.success && Array.isArray(res.data)) {
-      setProducts(res.data);
-    } else {
-      setProducts([]);
-    }
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
+  const products = Array.isArray(rawProducts) ? rawProducts : [];
 
   // Compute Categories
   const categories = ["All", ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))];
@@ -88,11 +81,12 @@ export function SalesInventoryPage() {
           <div className="flex items-center gap-3">
             <Button
               onClick={loadProducts}
+              disabled={isLoading || isRevalidating}
               variant="outline"
               size="sm"
               className="border-[#e8decf] text-[#4f351c] hover:bg-[#fff7e8] rounded-xl text-xs gap-1.5 h-9"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRevalidating ? "animate-spin" : ""}`} />
               Refresh
             </Button>
             <Link href="/sales/orders">

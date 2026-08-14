@@ -108,12 +108,13 @@ export async function createProductAction(input: CreateProductInput) {
 
     // Auto-create initial stock movement log
     if (data && input.stockQuantity > 0) {
-      await supabase.from("stock_logs").insert({
+      const adminSupabase = createAdminClient();
+      await adminSupabase.from("stock_logs").insert({
         movement_code: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
         product_id: data.id,
         product_name: input.name,
         product_sku: input.sku,
-        type: "Initial",
+        type: "Supplier Addition",
         quantity_shift: input.stockQuantity,
         reference_note: "Initial product stock onboarding",
         actor_name: "Staff Admin",
@@ -203,8 +204,10 @@ export async function adjustStockAction(input: AdjustStockInput) {
     const reorderLvl = prod?.reorder_level ?? 10;
     const status = newStock === 0 ? "Out of Stock" : newStock <= reorderLvl ? "Low Stock" : "In Stock";
 
+    const adminSupabase = createAdminClient();
+
     // 1. Update product table stock quantity & status
-    const { error: prodError } = await supabase
+    const { error: prodError } = await adminSupabase
       .from("products")
       .update({
         stock_quantity: newStock,
@@ -216,21 +219,26 @@ export async function adjustStockAction(input: AdjustStockInput) {
       return { success: false, error: prodError.message };
     }
 
-    // 2. Insert audit log into public.stock_logs
-    const movementType = input.type || (input.shiftAmount >= 0 ? "Addition" : "Deduction");
+    // 2. Insert audit log into public.stock_logs with valid Postgres enum stock_movement_type
+    const movementType: "Supplier Addition" | "Order Deduction" =
+      input.shiftAmount >= 0 ? "Supplier Addition" : "Order Deduction";
     const logCode = `LOG-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    await supabase.from("stock_logs").insert({
+    const { error: logError } = await adminSupabase.from("stock_logs").insert({
       movement_code: logCode,
       product_id: input.productId,
       product_name: input.productName,
       product_sku: input.productSku,
       type: movementType,
       quantity_shift: input.shiftAmount,
-      reference_note: input.reason,
-      actor_name: input.actorName || "Staff Member",
+      reference_note: input.reason || (input.shiftAmount >= 0 ? "Supplier Restock Inflow" : "Stock Adjustment Deduction"),
+      actor_name: input.actorName || "Inventory Manager",
       balance_after: newStock,
     });
+
+    if (logError) {
+      console.error("stock_logs insert error:", logError);
+    }
 
     return {
       success: true,

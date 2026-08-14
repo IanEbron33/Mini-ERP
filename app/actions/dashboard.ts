@@ -187,7 +187,7 @@ export async function fetchDashboardMetricsAction(): Promise<{
           name: catName,
           value: percent > 0 ? percent : 100,
           items: itemCount,
-          revenue: `$${sales.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          revenue: `₱${sales.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           color: COFFEE_PALETTE[idx % COFFEE_PALETTE.length],
         };
       }
@@ -199,7 +199,7 @@ export async function fetchDashboardMetricsAction(): Promise<{
         name: "General Catalog",
         value: 100,
         items: 0,
-        revenue: "$0.00",
+        revenue: "₱0.00",
         color: "#cfab71",
       });
     }
@@ -214,7 +214,7 @@ export async function fetchDashboardMetricsAction(): Promise<{
         day: "2-digit",
       }),
       items: o.item_count,
-      total: `$${Number(o.total_amount || 0).toFixed(2)}`,
+      total: `₱${Number(o.total_amount || 0).toFixed(2)}`,
       payment: o.payment_method,
       status: o.status,
     }));

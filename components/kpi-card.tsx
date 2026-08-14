@@ -55,7 +55,7 @@ export function KpiCardsSection({ metrics: propMetrics, isLoading: propIsLoading
   const kpis = [
     {
       title: "TOTAL SALES REVENUE",
-      value: `$${metrics.totalSales.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: `₱${metrics.totalSales.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       trend: metrics.salesTrend,
       isPositive: metrics.isPositiveTrend,
       icon: TrendingUp,

@@ -31,7 +31,7 @@ const defaultChartData: MonthlyRevenueData[] = [
 
 const chartConfig: ChartConfig = {
   revenue: {
-    label: "Revenue ($)",
+    label: "Revenue (₱)",
     color: "#713105", // ESPRESSO
   },
   orders: {
@@ -46,6 +46,13 @@ export function RevenueBarChart({ data = defaultChartData, isLoading = false }: 
   const chartData = data && data.length > 0 ? data : defaultChartData;
   const totalPeriodRevenue = chartData.reduce((acc, curr) => acc + curr.revenue, 0);
 
+  const formatYAxisTick = (val: number) => {
+    if (val === 0) return "₱0";
+    if (val >= 1_000_000) return `₱${(val / 1_000_000).toFixed(1)}M`;
+    if (val >= 10_000) return `₱${(val / 1_000).toFixed(0)}k`;
+    return `₱${val.toLocaleString("en-US")}`;
+  };
+
   return (
     <Card className="border-[#e8decf] shadow-xs rounded-2xl flex flex-col justify-between bg-white h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-[#e8decf]">
@@ -54,7 +61,7 @@ export function RevenueBarChart({ data = defaultChartData, isLoading = false }: 
             Revenue Analytics
           </CardTitle>
           <p className="text-[11px] text-[#7f5e35] mt-0.5">
-            Total 6-Month Volume: <strong className="text-[#713105] font-semibold">${totalPeriodRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong>
+            Total 6-Month Volume: <strong className="text-[#713105] font-semibold">₱{totalPeriodRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong>
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -109,9 +116,16 @@ export function RevenueBarChart({ data = defaultChartData, isLoading = false }: 
                   axisLine={false}
                   tickLine={false}
                   className="text-[10px] fill-[#7f5e35]"
-                  tickFormatter={(value) => (value >= 1000 ? `$${(value / 1000).toFixed(0)}k` : `$${value}`)}
+                  tickFormatter={formatYAxisTick}
                 />
-                <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      indicator="dot"
+                      formatter={(val) => `₱${Number(val).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+                    />
+                  }
+                />
                 <Bar
                   dataKey="revenue"
                   fill="#713105"
@@ -139,9 +153,16 @@ export function RevenueBarChart({ data = defaultChartData, isLoading = false }: 
                   axisLine={false}
                   tickLine={false}
                   className="text-[10px] fill-[#7f5e35]"
-                  tickFormatter={(value) => (value >= 1000 ? `$${(value / 1000).toFixed(0)}k` : `$${value}`)}
+                  tickFormatter={formatYAxisTick}
                 />
-                <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      indicator="dot"
+                      formatter={(val) => `₱${Number(val).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+                    />
+                  }
+                />
                 <Area
                   type="monotone"
                   dataKey="revenue"

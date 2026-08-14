@@ -35,7 +35,7 @@ export function LowStockRestockPage() {
             sku: p.sku,
             stock: p.stock_quantity,
             reorderLevel: p.reorder_level,
-            retailPrice: `$${Number(p.retail_price).toFixed(2)}`,
+            retailPrice: `₱${Number(p.retail_price).toFixed(2)}`,
             supplier: "Artisan Crafts Supplier",
             status: p.status,
           }));

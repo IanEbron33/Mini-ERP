@@ -16,7 +16,7 @@ const defaultCategoryData: CategoryDistributionData[] = [
     name: "General Catalog",
     value: 100,
     items: 0,
-    revenue: "$0.00",
+    revenue: "₱0.00",
     color: "#713105",
   },
 ];

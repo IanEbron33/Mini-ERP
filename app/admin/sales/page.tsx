@@ -75,7 +75,7 @@ export function AdminSalesPage() {
             year: "numeric",
           }),
           items: o.item_count,
-          total: `$${Number(o.total_amount || 0).toFixed(2)}`,
+          total: `₱${Number(o.total_amount || 0).toFixed(2)}`,
           payment: o.payment_method,
           status: o.status,
           productName: firstProduct?.name || "Catalog Product Item",
@@ -294,7 +294,7 @@ export function AdminSalesPage() {
             <DollarSign className="w-4 h-4 text-[#713105]" />
           </div>
           <div className="text-2xl font-bold text-[#341100] mt-2">
-            ${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ₱{totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <span className="text-[11px] text-[#7f5e35] font-normal">Active revenue</span>
         </Card>
@@ -322,7 +322,7 @@ export function AdminSalesPage() {
             <span>Avg Order Value</span>
             <ShoppingCart className="w-4 h-4 text-[#713105]" />
           </div>
-          <div className="text-2xl font-bold text-[#341100] mt-2">${avgOrderVal}</div>
+          <div className="text-2xl font-bold text-[#341100] mt-2">₱{avgOrderVal}</div>
           <span className="text-[11px] text-[#7f5e35] font-normal">Per transaction</span>
         </Card>
       </div>
@@ -531,7 +531,7 @@ export function AdminSalesPage() {
                   options={products.map((p) => ({
                     value: p.id,
                     label: `${p.name} (${p.sku})`,
-                    sublabel: `Retail: $${Number(p.retail_price).toFixed(2)} | Wholesale: $${Number(p.wholesale_price).toFixed(2)} | Stock: ${p.stock_quantity ?? 0}`,
+                    sublabel: `Retail: ₱${Number(p.retail_price).toFixed(2)} | Wholesale: ₱${Number(p.wholesale_price).toFixed(2)} | Stock: ${p.stock_quantity ?? 0}`,
                   }))}
                   placeholder="Select product from catalog..."
                 />
@@ -554,7 +554,7 @@ export function AdminSalesPage() {
                         Pricing Tier Summary
                       </span>
                       <span className="text-[11px] font-semibold text-[#341100]">
-                        Retail: ${retailUnitPrice.toFixed(2)} | Wholesale: ${wholesaleUnitPrice.toFixed(2)}
+                        Retail: ₱{retailUnitPrice.toFixed(2)} | Wholesale: ₱{wholesaleUnitPrice.toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -581,10 +581,10 @@ export function AdminSalesPage() {
                         )}
                       </div>
                       <div className="font-bold text-[#341100] text-xs mt-0.5">
-                        ${retailUnitPrice.toFixed(2)} <span className="text-[10px] text-[#7f5e35] font-normal">/ unit</span>
+                        ₱{retailUnitPrice.toFixed(2)} <span className="text-[10px] text-[#7f5e35] font-normal">/ unit</span>
                       </div>
                       <div className="text-[10px] font-semibold text-[#713105] mt-1">
-                        Total: ${retailTotal}
+                        Total: ₱{retailTotal}
                       </div>
                     </button>
 
@@ -608,10 +608,10 @@ export function AdminSalesPage() {
                         )}
                       </div>
                       <div className="font-bold text-emerald-800 text-xs mt-0.5">
-                        ${wholesaleUnitPrice.toFixed(2)} <span className="text-[10px] text-[#7f5e35] font-normal">/ unit</span>
+                        ₱{wholesaleUnitPrice.toFixed(2)} <span className="text-[10px] text-[#7f5e35] font-normal">/ unit</span>
                       </div>
                       <div className="text-[10px] font-semibold text-emerald-800 mt-1">
-                        Total: ${wholesaleTotal}
+                        Total: ₱{wholesaleTotal}
                       </div>
                     </button>
                   </div>
@@ -679,12 +679,12 @@ export function AdminSalesPage() {
                     Calculated Order Total ({pricingTier.toUpperCase()} TIER)
                   </span>
                   <div className="text-xl font-black text-[#713105] mt-0.5">
-                    ${calculatedTotal}
+                    ₱{calculatedTotal}
                   </div>
                 </div>
                 <div className="text-right text-[11px] text-[#7f5e35]">
                   <span className="font-semibold text-[#341100] block">{qtyNum}x units</span>
-                  <span>@ ${selectedUnitPrice.toFixed(2)} / unit</span>
+                  <span>@ ₱{selectedUnitPrice.toFixed(2)} / unit</span>
                 </div>
               </div>
 

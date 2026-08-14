@@ -37,8 +37,8 @@ const initialCatalog = [
     sku: "LT-LAMP-088",
     stock: 6,
     reorderLevel: 10,
-    retailPrice: "$125.00",
-    wholesalePrice: "$85.00",
+    retailPrice: "₱125.00",
+    wholesalePrice: "₱85.00",
     status: "Low Stock",
     image: "walnut_lamp.jpg",
   },
@@ -49,8 +49,8 @@ const initialCatalog = [
     sku: "KW-ESPR-002",
     stock: 120,
     reorderLevel: 25,
-    retailPrice: "$34.50",
-    wholesalePrice: "$22.00",
+    retailPrice: "₱34.50",
+    wholesalePrice: "₱22.00",
     status: "In Stock",
     image: "espresso_tamper.jpg",
   },
@@ -61,8 +61,8 @@ const initialCatalog = [
     sku: "HD-CUSH-014",
     stock: 3,
     reorderLevel: 15,
-    retailPrice: "$28.00",
-    wholesalePrice: "$18.00",
+    retailPrice: "₱28.00",
+    wholesalePrice: "₱18.00",
     status: "Low Stock",
     image: "cushion_cover.jpg",
   },
@@ -73,8 +73,8 @@ const initialCatalog = [
     sku: "KW-TEAK-009",
     stock: 0,
     reorderLevel: 5,
-    retailPrice: "$89.00",
-    wholesalePrice: "$58.00",
+    retailPrice: "₱89.00",
+    wholesalePrice: "₱58.00",
     status: "Out of Stock",
     image: "teak_stand.jpg",
   },
@@ -85,8 +85,8 @@ const initialCatalog = [
     sku: "HD-BLNK-032",
     stock: 84,
     reorderLevel: 20,
-    retailPrice: "$64.00",
-    wholesalePrice: "$42.00",
+    retailPrice: "₱64.00",
+    wholesalePrice: "₱42.00",
     status: "In Stock",
     image: "cotton_blanket.jpg",
   },
@@ -198,8 +198,8 @@ function ProductsCatalogContent() {
           sku: p.sku,
           stock: p.stock_quantity,
           reorderLevel: p.reorder_level,
-          retailPrice: `$${Number(p.retail_price).toFixed(2)}`,
-          wholesalePrice: `$${Number(p.wholesale_price).toFixed(2)}`,
+          retailPrice: `₱${Number(p.retail_price).toFixed(2)}`,
+          wholesalePrice: `₱${Number(p.wholesale_price).toFixed(2)}`,
           status: p.status,
           image: p.image_url || "product_img.jpg",
         }));
@@ -242,8 +242,8 @@ function ProductsCatalogContent() {
         sku: p.sku,
         stock: p.stock_quantity,
         reorderLevel: p.reorder_level,
-        retailPrice: `$${Number(p.retail_price).toFixed(2)}`,
-        wholesalePrice: `$${Number(p.wholesale_price).toFixed(2)}`,
+        retailPrice: `₱${Number(p.retail_price).toFixed(2)}`,
+        wholesalePrice: `₱${Number(p.wholesale_price).toFixed(2)}`,
         status: p.status,
         image: p.image_url || "product_img.jpg",
       };
@@ -272,8 +272,8 @@ function ProductsCatalogContent() {
     setEditCategory(product.category);
     setEditSku(product.sku);
     setEditReorderLvl(String(product.reorderLevel));
-    setEditRetailPrice(product.retailPrice.replace("$", ""));
-    setEditWholesalePrice(product.wholesalePrice.replace("$", ""));
+    setEditRetailPrice(product.retailPrice.replace("₱", "").replace("$", ""));
+    setEditWholesalePrice(product.wholesalePrice.replace("₱", "").replace("$", ""));
     setEditImagePreviewUrl(product.image || "");
   };
 
@@ -305,8 +305,8 @@ function ProductsCatalogContent() {
                 category: editCategory,
                 sku: editSku,
                 reorderLevel: Number(editReorderLvl),
-                retailPrice: `$${parseFloat(editRetailPrice).toFixed(2)}`,
-                wholesalePrice: `$${parseFloat(editWholesalePrice).toFixed(2)}`,
+                retailPrice: `₱${parseFloat(editRetailPrice).toFixed(2)}`,
+                wholesalePrice: `₱${parseFloat(editWholesalePrice).toFixed(2)}`,
                 image: editImagePreviewUrl || p.image,
               }
             : p

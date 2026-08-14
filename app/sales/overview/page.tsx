@@ -37,7 +37,7 @@ export function SalesPerformancePage() {
             year: "numeric",
           }),
           items: o.item_count,
-          total: `$${Number(o.total_amount || 0).toFixed(2)}`,
+          total: `₱${Number(o.total_amount || 0).toFixed(2)}`,
           payment: o.payment_method,
           status: o.status,
           productName: firstProduct?.name || "Catalog Product Item",
@@ -148,8 +148,8 @@ export function SalesPerformancePage() {
               Monthly Sales Quota Progress
             </span>
             <div className="text-xl font-bold text-[#341100] mt-0.5">
-              ${currentSalesTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /{" "}
-              <span className="text-[#7f5e35]">${monthlyQuota.toLocaleString("en-US", { minimumFractionDigits: 2 })} Target</span>
+              ₱{currentSalesTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /{" "}
+              <span className="text-[#7f5e35]">₱{monthlyQuota.toLocaleString("en-US", { minimumFractionDigits: 2 })} Target</span>
             </div>
           </div>
           <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-xs font-semibold px-3 py-1">
@@ -165,9 +165,9 @@ export function SalesPerformancePage() {
           />
         </div>
         <div className="flex justify-between text-[11px] text-[#7f5e35] mt-2 font-medium">
-          <span>Current Gross Sales: ${currentSalesTotal.toFixed(2)}</span>
+          <span>Current Gross Sales: ₱{currentSalesTotal.toFixed(2)}</span>
           <span>
-            Remaining to Target: ${Math.max(0, monthlyQuota - currentSalesTotal).toFixed(2)}
+            Remaining to Target: ₱{Math.max(0, monthlyQuota - currentSalesTotal).toFixed(2)}
           </span>
         </div>
       </Card>
@@ -179,7 +179,7 @@ export function SalesPerformancePage() {
             <span>Monthly Target</span>
             <TrendingUp className="w-4 h-4 text-[#713105]" />
           </div>
-          <div className="text-2xl font-bold text-[#341100] mt-2">${monthlyQuota.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
+          <div className="text-2xl font-bold text-[#341100] mt-2">₱{monthlyQuota.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
           <span className="text-[11px] text-[#7f5e35] font-normal">Monthly quota</span>
         </Card>
 
@@ -211,7 +211,7 @@ export function SalesPerformancePage() {
             <Award className="w-4 h-4 text-[#713105]" />
           </div>
           <div className="text-2xl font-bold text-emerald-700 mt-2">
-            ${earnedCommission}
+            ₱{earnedCommission}
           </div>
           <span className="text-[11px] text-emerald-700 font-semibold">10% standard rate</span>
         </Card>

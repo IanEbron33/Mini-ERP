@@ -307,10 +307,10 @@ export function InvoiceModal({ isOpen, onClose, order }: InvoiceModalProps) {
                         {item.quantity}
                       </td>
                       <td className="py-3.5 px-4 text-right text-[#7f5e35]">
-                        ${Number(item.unitPrice || 0).toFixed(2)}
+                        ₱{Number(item.unitPrice || 0).toFixed(2)}
                       </td>
                       <td className="py-3.5 px-4 text-right font-bold text-[#341100]">
-                        ${Number(item.total || item.quantity * item.unitPrice).toFixed(2)}
+                        ₱{Number(item.total || item.quantity * item.unitPrice).toFixed(2)}
                       </td>
                     </tr>
                   ))}
@@ -330,15 +330,15 @@ export function InvoiceModal({ isOpen, onClose, order }: InvoiceModalProps) {
               <div className="w-full sm:w-64 space-y-2 text-xs">
                 <div className="flex justify-between text-[#7f5e35]">
                   <span>Subtotal (Net):</span>
-                  <span className="font-medium text-[#341100]">${subtotal.toFixed(2)}</span>
+                  <span className="font-medium text-[#341100]">₱{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-[#7f5e35]">
                   <span>Estimated Tax (15%):</span>
-                  <span className="font-medium text-[#341100]">${taxAmount.toFixed(2)}</span>
+                  <span className="font-medium text-[#341100]">₱{taxAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-t border-b border-[#e8decf] font-bold text-sm text-[#341100]">
                   <span>Grand Total:</span>
-                  <span className="text-[#713105] text-base">${rawTotal.toFixed(2)}</span>
+                  <span className="text-[#713105] text-base">₱{rawTotal.toFixed(2)}</span>
                 </div>
               </div>
             </div>

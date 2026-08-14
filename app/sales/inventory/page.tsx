@@ -284,10 +284,10 @@ export function SalesInventoryPage() {
                         </div>
                       </td>
                       <td className="py-3.5 px-4 font-bold text-[#713105]">
-                        ${Number(product.retail_price || 0).toFixed(2)}
+                        ₱{Number(product.retail_price || 0).toFixed(2)}
                       </td>
                       <td className="py-3.5 px-4 font-medium text-[#7f5e35]">
-                        ${Number(product.wholesale_price || 0).toFixed(2)}
+                        ₱{Number(product.wholesale_price || 0).toFixed(2)}
                       </td>
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         {!isOutOfStock && !isLowStock && (

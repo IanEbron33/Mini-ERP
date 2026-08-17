@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -136,8 +137,35 @@ export async function sendPasswordResetAction(email: string) {
   try {
     const supabaseAdmin = createAdminClient();
 
+    // Determine current host & origin dynamically for local vs Vercel deployment
+    let origin = process.env.NEXT_PUBLIC_SITE_URL;
+
+    if (!origin) {
+      try {
+        const headersList = await headers();
+        const host = headersList.get("x-forwarded-host") || headersList.get("host");
+        const proto =
+          headersList.get("x-forwarded-proto") ||
+          (host && !host.includes("localhost") ? "https" : "http");
+        if (host) {
+          origin = `${proto}://${host}`;
+        }
+      } catch {
+        // In case headers context is not accessible
+      }
+    }
+
+    if (!origin && process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+      origin = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+    } else if (!origin && process.env.VERCEL_URL) {
+      origin = `https://${process.env.VERCEL_URL}`;
+    }
+
+    const resolvedOrigin = origin || "http://localhost:3000";
+    const redirectTo = `${resolvedOrigin}/login`;
+
     const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-      redirectTo: "http://localhost:3000/login",
+      redirectTo,
     });
 
     if (error) {
@@ -149,6 +177,7 @@ export async function sendPasswordResetAction(email: string) {
     return { success: false, error: err.message || "Failed to send reset email." };
   }
 }
+
 
 export async function deleteEmployeeAction(userId: string) {
   try {

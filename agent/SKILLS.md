@@ -7,7 +7,7 @@
 3. Don't commit or push, I should only doing that.
 4. Do not update automatically the `MEMORY.md` unless i say so.
 5. Don't use Emooji icon, use shadcn icon.
-6. Don't make the buttons, modal, alert, etc... in default style.
+6. Don't make the buttons, modal, alert, and many more in default style.
 
 --Do's
 1. Always depend on the `DESIGN.md` if you are going to implement something in user interface.

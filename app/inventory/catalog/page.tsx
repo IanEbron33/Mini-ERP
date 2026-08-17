@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   fetchProductsAction,
@@ -865,15 +866,19 @@ function ProductsCatalogContent() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block font-medium text-[#4f351c] mb-1">Category</label>
-                  <select
+                  <Select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full h-9 bg-[#fff7e8] border border-[#e8decf] rounded-xl px-2 text-xs text-[#341100] focus:outline-hidden"
-                  >
-                    <option value="Home Decor">Home Decor</option>
-                    <option value="Kitchenware">Kitchenware</option>
-                    <option value="Lighting">Lighting</option>
-                  </select>
+                    onValueChange={setCategory}
+                    options={[
+                      { value: "Home Decor", label: "Home Decor" },
+                      { value: "Kitchenware", label: "Kitchenware" },
+                      { value: "Lighting", label: "Lighting" },
+                      { value: "Furniture", label: "Furniture" },
+                      { value: "Office Supplies", label: "Office Supplies" },
+                    ]}
+                    size="sm"
+                    placeholder="Select Category"
+                  />
                 </div>
 
                 <div>
@@ -1036,17 +1041,19 @@ function ProductsCatalogContent() {
                 </div>
                 <div>
                   <label className="block font-semibold text-[#4f351c] mb-1">Category</label>
-                  <select
+                  <Select
                     value={editCategory}
-                    onChange={(e) => setEditCategory(e.target.value)}
-                    className="w-full h-9 bg-[#fff7e8] border border-[#e8decf] rounded-xl px-3 text-xs text-[#341100]"
-                  >
-                    <option value="Home Decor">Home Decor</option>
-                    <option value="Lighting">Lighting</option>
-                    <option value="Kitchenware">Kitchenware</option>
-                    <option value="Furniture">Furniture</option>
-                    <option value="Office Supplies">Office Supplies</option>
-                  </select>
+                    onValueChange={setEditCategory}
+                    options={[
+                      { value: "Home Decor", label: "Home Decor" },
+                      { value: "Lighting", label: "Lighting" },
+                      { value: "Kitchenware", label: "Kitchenware" },
+                      { value: "Furniture", label: "Furniture" },
+                      { value: "Office Supplies", label: "Office Supplies" },
+                    ]}
+                    size="sm"
+                    placeholder="Select Category"
+                  />
                 </div>
               </div>
 
@@ -1211,11 +1218,18 @@ function ProductsCatalogContent() {
                   Quantity ({shiftDirection === "add" ? "+" : "-"})
                 </label>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="e.g. 10"
                   value={shiftQuantity}
-                  onChange={(e) => setShiftQuantity(e.target.value)}
-                  className="bg-[#fff7e8] border-[#e8decf] rounded-xl text-xs font-bold text-[#341100] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || /^\d+$/.test(val)) {
+                      setShiftQuantity(val);
+                    }
+                  }}
+                  className="bg-[#fff7e8] border-[#e8decf] rounded-xl text-xs font-bold text-[#341100]"
                   required
                 />
               </div>

@@ -174,7 +174,7 @@ export function AdminSalesPage() {
       setIsModalOpen(false);
       setCustomerName("");
       setQuantity(1);
-      invalidateCache(["admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "catalog_products", "sales_portal_data"]);
+      invalidateCache(["admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "catalog_products", "inventory_stock_logs", "sales_portal_data"]);
       await loadData();
     } else {
       toast.error(res.error || "Failed to create order.");
@@ -186,7 +186,7 @@ export function AdminSalesPage() {
     const res = await updateOrderStatusAction(orderId, newStatus, "Staff Admin");
     if (res.success) {
       toast.success(res.message);
-      invalidateCache(["admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
+      invalidateCache(["admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "catalog_products", "inventory_stock_logs", "sales_portal_data"]);
       await loadData();
     } else {
       toast.error(res.error || "Failed to update order status.");
@@ -204,7 +204,7 @@ export function AdminSalesPage() {
     const res = await deleteOrderAction(deleteOrderId, "Staff Admin");
     if (res.success) {
       toast.success(res.message);
-      invalidateCache(["admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "catalog_products", "sales_portal_data"]);
+      invalidateCache(["admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "catalog_products", "inventory_stock_logs", "sales_portal_data"]);
       setDeleteOrderId(null);
       await loadData();
     } else {

@@ -128,6 +128,7 @@ export function LowStockRestockPage() {
       setRestockingItem(null);
       invalidateCache([
         "catalog_products",
+        "inventory_stock_logs",
         "admin_sales_data",
         "admin_dashboard_metrics",
         "admin_finance_ledger",

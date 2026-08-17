@@ -260,7 +260,7 @@ function ProductsCatalogContent() {
       setWholesalePrice("");
       setImageFileName("");
       setImagePreviewUrl("");
-      invalidateCache(["catalog_products", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
+      invalidateCache(["catalog_products", "inventory_stock_logs", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
       await loadDbProducts();
     } else {
       toast.error(res.error || "Failed to add product SKU.");
@@ -317,7 +317,7 @@ function ProductsCatalogContent() {
       toast.success(`Product SKU "${editName}" updated successfully.`);
       setFeedback({ type: "success", message: res.message || "Product SKU updated successfully." });
       setEditingProduct(null);
-      invalidateCache(["catalog_products", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
+      invalidateCache(["catalog_products", "inventory_stock_logs", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
       await loadDbProducts();
     } else {
       toast.error(res.error || "Failed to update product SKU.");
@@ -360,7 +360,7 @@ function ProductsCatalogContent() {
       toast.success(`Stock level for "${adjustingProduct.name}" updated to ${newStock} units.`);
       setFeedback({ type: "success", message: res.message || `Stock for ${adjustingProduct.name} updated to ${newStock} units.` });
       setAdjustingProduct(null);
-      invalidateCache(["catalog_products", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
+      invalidateCache(["catalog_products", "inventory_stock_logs", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
       await loadDbProducts();
     } else {
       toast.error(res.error || "Failed to adjust stock.");
@@ -381,7 +381,7 @@ function ProductsCatalogContent() {
       toast.success(`Product SKU "${deletingProduct.sku}" permanently deleted.`);
       setFeedback({ type: "success", message: res.message || "Product SKU deleted successfully." });
       setDeletingProduct(null);
-      invalidateCache(["catalog_products", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
+      invalidateCache(["catalog_products", "inventory_stock_logs", "admin_sales_data", "admin_dashboard_metrics", "admin_finance_ledger", "sales_portal_data"]);
       await loadDbProducts();
     } else {
       toast.error(res.error || "Failed to delete product SKU.");

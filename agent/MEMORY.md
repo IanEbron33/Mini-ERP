@@ -2,8 +2,9 @@
 
 ## 1. Project Overview
 * **Project Name:** Mini-ERP Web System (`mini-erp-app`)
-* **Tech Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Supabase (Auth, PostgreSQL DB & Row-Level Security), shadcn/ui primitives, Recharts, Lucide Icons, Sonner, jsPDF, html-to-image.
+* **Tech Stack:** Next.js 16 (Turbopack, App Router), React 19, TypeScript, Tailwind CSS v4, Supabase (Auth, PostgreSQL DB & Row-Level Security), shadcn/ui primitives, Recharts, Lucide Icons, Sonner, jsPDF, html-to-image.
 * **Workspace Location:** `c:\Users\ADMIN\Desktop\Folder1\mini-erp-app`
+* **Repository:** `IanEbron33/Mini-ERP` (branch: `master`)
 
 ---
 
@@ -46,8 +47,8 @@ All UI components strictly adhere to the warm coffee/espresso color palette:
 * **Instant 0ms Page Navigation**: All tabs render cached views immediately with zero loading skeletons or spinners.
 * **Silent Background Revalidation**: Fetches live updates from Supabase asynchronously without freezing the UI or shifting focus.
 * **Targeted Mutation Invalidation (`invalidateCache`)**:
-  * Order mutations (create, cancel, delete, status change) immediately purge and refresh `'admin_sales_data'`, `'admin_dashboard_metrics'`, `'admin_finance_ledger'`, and `'catalog_products'`.
-  * Stock adjustments & restocks immediately purge and refresh `'catalog_products'`, `'admin_sales_data'`, `'admin_dashboard_metrics'`, and `'admin_finance_ledger'`.
+  * Order mutations (create, cancel, delete, status change) immediately purge and refresh `'admin_sales_data'`, `'admin_dashboard_metrics'`, `'admin_finance_ledger'`, `'catalog_products'`, and `'inventory_stock_logs'`.
+  * Stock adjustments & supplier restocks immediately purge and refresh `'catalog_products'`, `'inventory_stock_logs'`, `'admin_sales_data'`, `'admin_dashboard_metrics'`, and `'admin_finance_ledger'`.
 * **Manual Refresh Bypass**: Each page's `[ Refresh ]` button forces a direct, synchronous database re-fetch on demand.
 
 ---
@@ -96,7 +97,7 @@ All UI components strictly adhere to the warm coffee/espresso color palette:
   * **Total Expenses (`₱`)**: Procurement inventory restock expenditures.
   * **Net Profit (`₱`)**: Net operating profit (`Gross Revenue - Total Expenses`).
   * **Estimated Tax Provision (`₱`)**: 15% net tax reserve.
-* **Multi-Criteria Filter Suite**: Search keyword, Transaction Type (`All`, `Income`, `Expense`), and Category filters.
+* **Multi-Criteria Filter Suite**: Search keyword, Transaction Type (`All`, `Income`, `Expense`), and Category filters using custom coffee `<Select />`.
 * **1-Click CSV Export Engine**: Generates clean, downloadable accounting spreadsheets (`Mini-ERP-General-Ledger-YYYY-MM-DD.csv`).
 
 ### 3. Sales & Orders Management Suite ([app/admin/sales/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/sales/page.tsx) & [app/sales/orders/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/sales/orders/page.tsx))
@@ -114,16 +115,17 @@ All UI components strictly adhere to the warm coffee/espresso color palette:
 * **Direct 1-Click PDF Download (`html-to-image` + `jsPDF`)**: Client-side PDF generation that directly downloads `Invoice-ORD-XXXX.pdf` in `₱` without opening the print dialog.
 * **Isolated 1-Page Portrait Printing**: `@media print` isolation hiding all background web app UI to generate a single clean sheet.
 
-### 5. Inventory Management Suite
+### 5. Inventory Management Suite (Fully Dynamic & SWR Optimized)
 
 #### A. Stock Overview ([app/inventory/overview/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/overview/page.tsx))
 * **Live Macro Warehouse KPIs**: Real-time Active SKUs, Total Units, Total Inventory Asset Valuation (`₱` wholesale basis), Items Requiring Restock, and Critical Out-of-Stock SKUs.
 * **Live Critical Restock Priority Feed**: Real-time action feed highlighting products below reorder thresholds with an inline 1-click Restock Modal.
 * **Category Stock & Valuation Breakdown Cards**: Category-by-category SKU counts, physical unit sums, and asset valuation in `₱`.
 * **Category Distribution Donut Chart**: Visual representation of inventory asset proportion across categories.
+* **Synchronous SWR Refresh**: Manual sync button in header.
 
 #### B. Low Stock & Supplier Restock ([app/inventory/low-stock/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/low-stock/page.tsx))
-* **Multi-Criteria Filter Suite**: Search input, custom coffee `<Select>` category dropdown, and Urgency buttons (`All Alerts`, `Out of Stock Only`, `Low Stock Only`).
+* **Multi-Criteria Filter Suite**: Search input, custom coffee `<Select />` category dropdown, and Urgency buttons (`All Alerts`, `Out of Stock Only`, `Low Stock Only`).
 * **Dynamic Restock Modal**:
   * Plain numeric text input (`inputMode="numeric"`) with zero stepper arrows and smooth backspacing/typing without sticky zero locks.
   * Quick preset quantity chips (`+10`, `+25`, `+50`, `+100`).
@@ -137,8 +139,11 @@ All UI components strictly adhere to the warm coffee/espresso color palette:
 * **Cascading Delete with Service Role Client**: Safe deletion of dependent `stock_logs` and `order_items` records before deleting product rows.
 * **Quick Stock Adjustment Modal**: Clean numeric input with add/deduct toggles and audit reference notes.
 
-#### D. Stock Movement Audit Trail ([app/inventory/stock-logs/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/stock-logs/page.tsx))
-* Operational audit trail displaying every stock deduction, order fulfillment, and supplier addition with timestamp, actor attribution, and balance after movement.
+#### D. Stock Movement History & Audit Trail ([app/inventory/stock-logs/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/inventory/stock-logs/page.tsx))
+* **Real-Time SWR Integration**: Connected to `useSwrData("inventory_stock_logs", fetchStockLogsAction)` with 0ms instant mount.
+* **Live Macro KPI Cards**: Real-time Stock Additions (`+X units`), Stock Deductions (`-Y units`), Net Stock Velocity, and Total Audit Trail Entries.
+* **Multi-Criteria Filter Suite**: Search input, custom coffee `<Select />` dropdown for Movement Types, and segmented direction toggle pills (`All`, `Additions`, `Deductions`).
+* **1-Click CSV Audit Export**: Generates and downloads `Mini-ERP-Stock-Movement-Audit-YYYY-MM-DD.csv` with UTF-8 BOM encoding for clean spreadsheet compatibility.
 
 ### 6. User Management & Administration ([app/admin/users/page.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/app/admin/users/page.tsx))
 * **Admin Staff Registration**: Admin-only staff creation via Supabase Service Role client (`registerEmployeeAction`).
@@ -147,6 +152,7 @@ All UI components strictly adhere to the warm coffee/espresso color palette:
 
 ### 7. Global Feedback & UI Enhancements
 * **Custom Coffee Select Primitives ([components/ui/select.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/ui/select.tsx))**: Reusable dropdown component replacing browser-native selects across all portals.
+* **Plain Numeric Input Fields**: Zero browser stepper arrows; smooth typing and erasing across all stock inputs without trapped leading zeros.
 * **Sonner Toast System ([components/ui/sonner.tsx](file:///c:/Users/ADMIN/Desktop/Folder1/mini-erp-app/components/ui/sonner.tsx))**: Real-time feedback across all actions.
 * **Skeleton Loading States**: Shimmer loading rows eliminating visual flashes.
 * **Strict Vector Icons**: Exclusively uses `lucide-react` vector icons (no emojis).

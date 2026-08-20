@@ -84,14 +84,15 @@ const ADMIN_TOOLS = [
 
 const SYSTEM_INSTRUCTION = `
 You are the Mini-ERP AI Copilot for the Administrator Portal.
-Your primary role is to assist the store executives and administrators with real-time business intelligence, financial accounting, inventory valuations, order summaries, and audit oversight.
+Your primary role is to assist store executives and administrators with real-time business intelligence, financial accounting, inventory valuations, order summaries, and audit oversight.
 
 Important Guidelines:
-1. Always format financial values in Philippine Peso with the '₱' symbol (e.g. ₱2,149.65, ₱20,000.00).
-2. When answering questions regarding revenue, inventory stock, orders, or logs, ALWAYS use the provided tools to query fresh live database records.
-3. Be concise, professional, structured, and insightful. Use markdown bolding, bullet points, and brief tables when summarizing multiple metrics.
-4. When the user asks to restock or adjust an item, use 'propose_stock_adjustment' so a confirmation card is generated for human review. Never claim an action is permanently committed until the user confirms.
-5. Do NOT use emojis. Use clean, professional formatting.
+1. Keep responses short, direct, and concise (aim for 2 to 4 focused bullet points or 1-2 compact paragraphs maximum). Get straight to the key figures and conclusions without filler or lengthy disclaimers.
+2. Always format financial values in Philippine Peso with the '₱' symbol (e.g. ₱2,149.65, ₱20,000.00).
+3. When answering questions regarding revenue, inventory stock, orders, or logs, ALWAYS use the provided tools to query fresh live database records.
+4. When presenting multiple data points, use compact bullet points or brief tables rather than lengthy prose.
+5. When the user asks to restock or adjust an item, use 'propose_stock_adjustment' so a confirmation card is generated for human review. Never claim an action is permanently committed until the user confirms.
+6. Do NOT use emojis. Use clean, professional formatting.
 `;
 
 export async function POST(req: NextRequest) {
@@ -172,88 +173,93 @@ export async function POST(req: NextRequest) {
     const candidate = data.candidates?.[0];
     const parts = candidate?.content?.parts || [];
 
-    // 2. Check if Gemini requested a Tool / Function Call
-    const functionCallPart = parts.find((p: any) => p.functionCall);
+    // 2. Check if Gemini requested Tool / Function Calls (supporting parallel tool calls)
+    const functionCallParts = parts.filter((p: any) => p.functionCall);
 
-    if (functionCallPart) {
-      const fnName = functionCallPart.functionCall.name;
-      const fnArgs = functionCallPart.functionCall.args || {};
-      let toolResult: any = {};
+    if (functionCallParts.length > 0) {
       let proposedAction: any = null;
+      const toolNames: string[] = [];
 
-      // Execute Tool
-      if (fnName === "get_financial_ledger") {
-        const res = await fetchFinancialLedgerAction();
-        toolResult = res.data || { error: res.error };
-      } else if (fnName === "get_dashboard_kpis") {
-        const res = await fetchDashboardMetricsAction();
-        toolResult = res.data || { error: res.error };
-      } else if (fnName === "get_inventory_status") {
-        const res = await fetchProductsAction();
-        let prods = res.data || [];
-        if (fnArgs.filter === "low_stock") {
-          prods = prods.filter((p: any) => (p.stock_quantity ?? 0) <= (p.reorder_level ?? 10));
-        } else if (fnArgs.filter === "out_of_stock") {
-          prods = prods.filter((p: any) => (p.stock_quantity ?? 0) === 0);
-        }
-        toolResult = {
-          totalProducts: prods.length,
-          products: prods.slice(0, 15),
-        };
-      } else if (fnName === "get_recent_orders") {
-        const res = await fetchOrdersAction();
-        const limit = fnArgs.limit || 10;
-        toolResult = {
-          orders: (res.data || []).slice(0, limit),
-        };
-      } else if (fnName === "get_audit_security_logs") {
-        const res = await fetchAuditLogsAction();
-        let logs = res.data || [];
-        if (fnArgs.module) {
-          logs = logs.filter((l: any) => l.module?.toLowerCase().includes(fnArgs.module.toLowerCase()));
-        }
-        toolResult = {
-          logs: logs.slice(0, 10),
-        };
-      } else if (fnName === "propose_stock_adjustment") {
-        // Find product ID from catalog
-        const prodsRes = await fetchProductsAction();
-        const matched = (prodsRes.data || []).find(
-          (p: any) =>
-            p.name?.toLowerCase().includes(fnArgs.productName?.toLowerCase()) ||
-            p.sku?.toLowerCase() === fnArgs.productSku?.toLowerCase()
-        );
+      const functionResponses = await Promise.all(
+        functionCallParts.map(async (part: any) => {
+          const fnName = part.functionCall.name;
+          const fnArgs = part.functionCall.args || {};
+          toolNames.push(fnName);
+          let toolResult: any = {};
 
-        proposedAction = {
-          type: "STOCK_ADJUSTMENT",
-          productId: matched?.id || "unknown",
-          productName: matched?.name || fnArgs.productName,
-          productSku: matched?.sku || fnArgs.productSku || "SKU-AUTO",
-          currentStock: matched?.stock_quantity ?? 0,
-          shiftAmount: Number(fnArgs.quantity || 0),
-          reason: fnArgs.reason || "AI Recommended Adjustment",
-        };
+          if (fnName === "get_financial_ledger") {
+            const res = await fetchFinancialLedgerAction();
+            toolResult = res.data || { error: res.error };
+          } else if (fnName === "get_dashboard_kpis") {
+            const res = await fetchDashboardMetricsAction();
+            toolResult = res.data || { error: res.error };
+          } else if (fnName === "get_inventory_status") {
+            const res = await fetchProductsAction();
+            let prods = res.data || [];
+            if (fnArgs.filter === "low_stock") {
+              prods = prods.filter((p: any) => (p.stock_quantity ?? 0) <= (p.reorder_level ?? 10));
+            } else if (fnArgs.filter === "out_of_stock") {
+              prods = prods.filter((p: any) => (p.stock_quantity ?? 0) === 0);
+            }
+            toolResult = {
+              totalProducts: prods.length,
+              products: prods.slice(0, 15),
+            };
+          } else if (fnName === "get_recent_orders") {
+            const res = await fetchOrdersAction();
+            const limit = fnArgs.limit || 10;
+            toolResult = {
+              orders: (res.data || []).slice(0, limit),
+            };
+          } else if (fnName === "get_audit_security_logs") {
+            const res = await fetchAuditLogsAction();
+            let logs = res.data || [];
+            if (fnArgs.module) {
+              logs = logs.filter((l: any) => l.module?.toLowerCase().includes(fnArgs.module.toLowerCase()));
+            }
+            toolResult = {
+              logs: logs.slice(0, 10),
+            };
+          } else if (fnName === "propose_stock_adjustment") {
+            const prodsRes = await fetchProductsAction();
+            const matched = (prodsRes.data || []).find(
+              (p: any) =>
+                p.name?.toLowerCase().includes(fnArgs.productName?.toLowerCase()) ||
+                p.sku?.toLowerCase() === fnArgs.productSku?.toLowerCase()
+            );
 
-        toolResult = {
-          status: "PROPOSAL_READY_FOR_CONFIRMATION",
-          proposal: proposedAction,
-        };
-      }
+            proposedAction = {
+              type: "STOCK_ADJUSTMENT",
+              productId: matched?.id || "unknown",
+              productName: matched?.name || fnArgs.productName,
+              productSku: matched?.sku || fnArgs.productSku || "SKU-AUTO",
+              currentStock: matched?.stock_quantity ?? 0,
+              shiftAmount: Number(fnArgs.quantity || 0),
+              reason: fnArgs.reason || "AI Recommended Adjustment",
+            };
 
-      // 3. Second Turn: Send Function Response back to Gemini for final synthesis
+            toolResult = {
+              status: "PROPOSAL_READY_FOR_CONFIRMATION",
+              proposal: proposedAction,
+            };
+          }
+
+          return {
+            functionResponse: {
+              name: fnName,
+              response: { output: toolResult },
+            },
+          };
+        })
+      );
+
+      // 3. Second Turn: Send all Function Responses back to Gemini for final synthesis
       const secondTurnContents = [
         ...geminiContents,
         candidate.content,
         {
           role: "user",
-          parts: [
-            {
-              functionResponse: {
-                name: fnName,
-                response: { output: toolResult },
-              },
-            },
-          ],
+          parts: functionResponses,
         },
       ];
 
@@ -281,7 +287,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         content: finalText,
-        toolCalled: fnName,
+        toolCalled: toolNames.join(", "),
         proposedAction,
       });
     }

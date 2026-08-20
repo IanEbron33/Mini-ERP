@@ -24,65 +24,81 @@ export async function proxy(request: NextRequest) {
           request,
         });
         cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value)
+          response.cookies.set(name, value, options)
         );
       },
     },
   });
 
-  // Refresh auth session
+  // 1. Refresh auth session
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
 
-  // 1. If visiting root /, redirect to login or overview
+  const userRole = user?.user_metadata?.role || "Sales";
+
+  // Helper to determine home dashboard for any role
+  const getRoleLandingUrl = (role: string) => {
+    if (role === "Admin") return "/admin/dashboard";
+    if (role === "Inventory") return "/inventory/overview";
+    return "/sales/overview";
+  };
+
+  // 2. If visiting root /, redirect to login or role portal
   if (pathname === "/") {
     if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
-    } else {
-      const role = user.user_metadata?.role || "Sales";
-      const target =
-        role === "Admin"
-          ? "/admin/dashboard"
-          : role === "Inventory"
-          ? "/inventory/overview"
-          : "/sales/overview";
-      return NextResponse.redirect(new URL(target, request.url));
     }
+    return NextResponse.redirect(new URL(getRoleLandingUrl(userRole), request.url));
   }
 
-  // 2. Protected Routes Guard: /admin, /sales, /inventory
+  // 3. Protected route definitions
   const isProtectedRoute =
     pathname.startsWith("/admin") ||
     pathname.startsWith("/sales") ||
     pathname.startsWith("/inventory");
 
+  // Unauthenticated users attempting to access protected routes
   if (isProtectedRoute && !user) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // 3. Prevent logged-in users from visiting /login page
+  // 4. Authenticated users visiting /login -> redirect to their portal home
   if (pathname === "/login" && user) {
-    const role = user.user_metadata?.role || "Sales";
-    const target =
-      role === "Admin"
-        ? "/admin/dashboard"
-        : role === "Inventory"
-        ? "/inventory/overview"
-        : "/sales/overview";
-    return NextResponse.redirect(new URL(target, request.url));
+    return NextResponse.redirect(new URL(getRoleLandingUrl(userRole), request.url));
   }
 
-  // 4. Role-based Route Restriction
+  // 5. Granular Role-Based Access Control (RBAC) Guard
   if (user && isProtectedRoute) {
-    const userRole = user.user_metadata?.role || "Sales";
+    // Admin has full enterprise access across all portals
+    if (userRole === "Admin") {
+      return response;
+    }
 
-    if (pathname.startsWith("/admin") && userRole !== "Admin") {
-      const fallback =
-        userRole === "Inventory" ? "/inventory/overview" : "/sales/overview";
-      return NextResponse.redirect(new URL(fallback, request.url));
+    // Sales Representative restrictions
+    if (userRole === "Sales") {
+      // Cannot access admin suite -> redirect to sales overview
+      if (pathname.startsWith("/admin")) {
+        return NextResponse.redirect(new URL("/sales/overview", request.url));
+      }
+      // Direct access to write inventory routes (/inventory/*) -> redirect to dedicated read-only view (/sales/inventory)
+      if (pathname.startsWith("/inventory")) {
+        return NextResponse.redirect(new URL("/sales/inventory", request.url));
+      }
+    }
+
+    // Inventory Manager restrictions
+    if (userRole === "Inventory") {
+      // Cannot access admin suite -> redirect to inventory overview
+      if (pathname.startsWith("/admin")) {
+        return NextResponse.redirect(new URL("/inventory/overview", request.url));
+      }
+      // Cannot access sales operations suite (/sales/*) -> redirect to inventory overview
+      if (pathname.startsWith("/sales")) {
+        return NextResponse.redirect(new URL("/inventory/overview", request.url));
+      }
     }
   }
 

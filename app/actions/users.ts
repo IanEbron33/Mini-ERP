@@ -199,3 +199,36 @@ export async function deleteEmployeeAction(userId: string) {
   }
 }
 
+export async function updateUserQuotaAction(userId: string, monthlyQuota: number) {
+  try {
+    const supabaseAdmin = createAdminClient();
+
+    // 1. Update user metadata in auth.users
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      user_metadata: { monthly_quota: monthlyQuota },
+    });
+
+    if (authError) {
+      console.warn("auth.admin.updateUserById quota warning:", authError.message);
+    }
+
+    // 2. Try to update public.profiles if column exists
+    try {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ monthly_quota: monthlyQuota })
+        .eq("id", userId);
+    } catch {
+      // Ignored if column not added to profiles table
+    }
+
+    return {
+      success: true,
+      monthlyQuota,
+      message: `Monthly sales quota updated to ₱${monthlyQuota.toLocaleString("en-US", { minimumFractionDigits: 2 })}.`,
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to update target quota." };
+  }
+}
+

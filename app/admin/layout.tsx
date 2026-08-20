@@ -4,6 +4,7 @@ import React from "react";
 import { SidebarRail } from "@/components/sidebar-rail";
 import { MainSidebar } from "@/components/main-sidebar";
 import { TopHeader } from "@/components/top-header";
+import { AdminAiCopilot } from "@/components/admin-ai-copilot";
 
 export default function AdminLayout({
   children,
@@ -25,6 +26,9 @@ export default function AdminLayout({
           {children}
         </main>
       </div>
+
+      {/* 4. Global Admin AI Copilot (Gemini Flash-Lite) */}
+      <AdminAiCopilot />
     </div>
   );
 }

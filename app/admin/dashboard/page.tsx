@@ -14,6 +14,11 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
+  Edit2,
+  Target,
+  Check,
+  X,
+  Loader2,
 } from "lucide-react";
 import { KpiCardsSection } from "@/components/kpi-card";
 import { RevenueBarChart } from "@/components/revenue-bar-chart";
@@ -21,9 +26,13 @@ import { CategoryPieChart } from "@/components/category-pie-chart";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { fetchDashboardMetricsAction, DashboardMetrics } from "@/app/actions/dashboard";
+import { getCurrentUserAction } from "@/app/actions/auth";
+import { updateUserQuotaAction } from "@/app/actions/users";
 import { InvoiceModal, InvoiceOrderData } from "@/components/invoice-modal";
 import { useSwrData } from "@/lib/cache/swr-cache";
+import { toast } from "sonner";
 
 export default function DashboardOverviewPage() {
   const {
@@ -37,12 +46,62 @@ export default function DashboardOverviewPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceOrderData | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
+  // Enterprise target quota state
+  const [storeQuota, setStoreQuota] = useState<number>(100000);
+  const [adminUserId, setAdminUserId] = useState<string | null>(null);
+  const [isQuotaModalOpen, setIsQuotaModalOpen] = useState(false);
+  const [quotaInputValue, setQuotaInputValue] = useState<number | string>(100000);
+  const [isSavingQuota, setIsSavingQuota] = useState(false);
+
+  useEffect(() => {
+    async function loadAdminQuota() {
+      const res = await getCurrentUserAction();
+      if (res.authenticated && res.user) {
+        setAdminUserId(res.user.id);
+        if (res.user.monthlyQuota) {
+          setStoreQuota(res.user.monthlyQuota);
+          setQuotaInputValue(res.user.monthlyQuota);
+        }
+      }
+    }
+    loadAdminQuota();
+  }, []);
+
   const todayDateFormatted = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+
+  const currentSalesTotal = metrics?.totalSales || 0;
+  const quotaProgressPercent = Math.min(100, (currentSalesTotal / Math.max(1, storeQuota)) * 100);
+
+  const handleSaveStoreQuota = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsed = typeof quotaInputValue === "number" ? quotaInputValue : parseFloat(String(quotaInputValue).replace(/[^0-9.]/g, "")) || 0;
+    if (parsed <= 0) {
+      toast.error("Please enter a valid target goal greater than 0.");
+      return;
+    }
+
+    setIsSavingQuota(true);
+    if (adminUserId) {
+      const res = await updateUserQuotaAction(adminUserId, parsed);
+      if (res.success) {
+        setStoreQuota(parsed);
+        toast.success(`Enterprise monthly target goal updated to ₱${parsed.toLocaleString("en-US", { minimumFractionDigits: 2 })}.`);
+        setIsQuotaModalOpen(false);
+      } else {
+        toast.error(res.error || "Failed to update target goal.");
+      }
+    } else {
+      setStoreQuota(parsed);
+      toast.success(`Enterprise monthly target goal updated to ₱${parsed.toLocaleString("en-US", { minimumFractionDigits: 2 })}.`);
+      setIsQuotaModalOpen(false);
+    }
+    setIsSavingQuota(false);
+  };
 
   const openInvoiceModal = (order: any) => {
     setSelectedInvoice({
@@ -102,6 +161,53 @@ export default function DashboardOverviewPage() {
         </CardContent>
       </Card>
 
+      {/* Enterprise Revenue Target Progress Card */}
+      <Card className="border-[#e8decf] bg-white p-6 rounded-2xl shadow-xs">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#7f5e35]">
+                Enterprise Monthly Revenue Goal
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setQuotaInputValue(storeQuota);
+                  setIsQuotaModalOpen(true);
+                }}
+                className="h-6 px-2 text-[10px] font-bold text-[#713105] hover:text-[#341100] hover:bg-[#fcf3e3] rounded-lg gap-1 border border-[#cfab71]/40 shadow-2xs cursor-pointer"
+                title="Adjust store-wide monthly revenue target"
+              >
+                <Edit2 className="w-3 h-3 text-[#713105]" />
+                Edit Target
+              </Button>
+            </div>
+            <div className="text-xl font-bold text-[#341100] mt-0.5">
+              ₱{currentSalesTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /{" "}
+              <span className="text-[#7f5e35]">₱{storeQuota.toLocaleString("en-US", { minimumFractionDigits: 2 })} Target</span>
+            </div>
+          </div>
+          <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-xs font-semibold px-3 py-1">
+            {quotaProgressPercent.toFixed(1)}% Achieved
+          </Badge>
+        </div>
+
+        {/* Visual Progress Bar */}
+        <div className="w-full bg-[#fff7e8] border border-[#e8decf] h-4 rounded-full overflow-hidden p-0.5">
+          <div
+            className="bg-[#713105] h-full rounded-full transition-all duration-500"
+            style={{ width: `${quotaProgressPercent}%` }}
+          />
+        </div>
+        <div className="flex justify-between text-[11px] text-[#7f5e35] mt-2 font-medium">
+          <span>Total Store Gross Sales: ₱{currentSalesTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+          <span>
+            Remaining to Milestone: ₱{Math.max(0, storeQuota - currentSalesTotal).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          </span>
+        </div>
+      </Card>
+
       {/* 4 Dynamic KPI Cards Grid */}
       <KpiCardsSection metrics={metrics || undefined} isLoading={isLoading} />
 
@@ -124,7 +230,7 @@ export default function DashboardOverviewPage() {
         </div>
       </div>
 
-      {/* Live Recent Activity & Inventory Alerts Section (Option 1) */}
+      {/* Live Recent Activity & Inventory Alerts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {/* Left Column: Recent Orders Activity Feed */}
         <div className="lg:col-span-7 xl:col-span-8 flex flex-col">
@@ -301,6 +407,119 @@ export default function DashboardOverviewPage() {
           </Card>
         </div>
       </div>
+
+      {/* Enterprise Quota Adjustment Modal */}
+      {isQuotaModalOpen && (
+        <div className="fixed inset-0 bg-stone-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl border border-[#e8decf] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-5 border-b border-[#e8decf] flex items-center justify-between bg-[#fff7e8]">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-[#713105] flex items-center justify-center text-[#fff7e8] font-bold text-xs">
+                  <Target className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-sm text-[#341100]">
+                    Adjust Enterprise Revenue Goal
+                  </h2>
+                  <p className="text-[10px] text-[#7f5e35]">
+                    Sets the company-wide monthly sales revenue target milestone
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsQuotaModalOpen(false)}
+                className="text-[#7f5e35] hover:text-[#341100] p-1 rounded-lg hover:bg-[#cfab71]/20"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStoreQuota} className="p-6 space-y-4 text-xs text-[#341100]">
+              <div>
+                <label className="block font-semibold text-[#4f351c] mb-1.5">
+                  Quick Milestone Presets
+                </label>
+                <div className="grid grid-cols-4 gap-1.5 mb-3">
+                  {[50000, 100000, 250000, 500000].map((preset) => (
+                    <Button
+                      key={preset}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setQuotaInputValue(preset)}
+                      className={`h-7 text-[11px] font-bold rounded-lg border-[#e8decf] ${
+                        Number(quotaInputValue) === preset
+                          ? "bg-[#713105] text-[#fff7e8] border-[#713105]"
+                          : "bg-[#fff7e8] text-[#713105] hover:bg-[#cfab71]/30"
+                      }`}
+                    >
+                      ₱{(preset / 1000)}k
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#4f351c] mb-1.5">
+                  Store Monthly Revenue Target (₱ PHP) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-sm text-[#713105]">
+                    ₱
+                  </span>
+                  <Input
+                    type="number"
+                    min="5000"
+                    step="1000"
+                    required
+                    value={quotaInputValue}
+                    onChange={(e) => setQuotaInputValue(e.target.value)}
+                    className="pl-8 bg-[#fff7e8] border-[#e8decf] rounded-xl text-sm font-bold text-[#341100] h-10 focus:bg-white"
+                    placeholder="100000"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-[#fff7e8]/60 border border-[#e8decf] rounded-xl text-xs space-y-1">
+                <div className="flex justify-between text-[11px] text-[#7f5e35]">
+                  <span>Current Store Gross Sales:</span>
+                  <span className="font-bold text-[#341100]">₱{currentSalesTotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-[11px] text-[#7f5e35]">
+                  <span>New Milestone Target:</span>
+                  <span className="font-bold text-[#713105]">
+                    ₱{Number(quotaInputValue || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-[#e8decf]">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsQuotaModalOpen(false)}
+                  className="border-[#e8decf] text-[#7f5e35] text-xs rounded-xl h-9"
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  type="submit"
+                  disabled={isSavingQuota || Number(quotaInputValue || 0) <= 0}
+                  className="bg-[#713105] text-[#fff7e8] hover:bg-[#4f351c] text-xs font-semibold rounded-xl px-5 h-9 shadow-xs cursor-pointer"
+                >
+                  {isSavingQuota ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  ) : (
+                    <Check className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  Save Enterprise Goal
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Invoice Modal for Dashboard View */}
       <InvoiceModal

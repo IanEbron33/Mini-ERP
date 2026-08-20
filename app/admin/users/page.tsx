@@ -24,6 +24,7 @@ import {
   Trash2,
   Shield,
   AlertTriangle,
+  Target,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ import {
   toggleUserStatusAction,
   sendPasswordResetAction,
   deleteEmployeeAction,
+  updateUserQuotaAction,
 } from "@/app/actions/users";
 
 const initialMockUsers = [
@@ -105,6 +107,8 @@ export function UserManagementPage() {
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [newRoleSelection, setNewRoleSelection] = useState<"Admin" | "Sales" | "Inventory">("Sales");
   const [deletingUser, setDeletingUser] = useState<any | null>(null);
+  const [quotaUser, setQuotaUser] = useState<any | null>(null);
+  const [quotaInput, setQuotaInput] = useState<number | string>(20000);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Filter states
@@ -135,6 +139,7 @@ export function UserManagementPage() {
           department: p.department,
           status: p.status,
           initials: p.initials || p.full_name.slice(0, 2).toUpperCase(),
+          monthlyQuota: Number(p.monthly_quota || 20000),
         }));
         setUsers(mapped);
       } else {
@@ -256,6 +261,25 @@ export function UserManagementPage() {
       setDeletingUser(null);
     } else {
       setFeedback({ type: "error", message: res.error || "Failed to delete account." });
+    }
+  };
+
+  // Action 5: Save Staff Quota
+  const handleSaveQuota = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quotaUser) return;
+    setActionLoading(true);
+
+    const parsed = typeof quotaInput === "number" ? quotaInput : parseFloat(String(quotaInput).replace(/[^0-9.]/g, "")) || 0;
+    const res = await updateUserQuotaAction(quotaUser.dbId, parsed);
+    setActionLoading(false);
+
+    if (res.success) {
+      setUsers(users.map((u) => (u.id === quotaUser.id ? { ...u, monthlyQuota: parsed } : u)));
+      setFeedback({ type: "success", message: res.message || `Monthly sales quota updated to ₱${parsed.toLocaleString("en-US", { minimumFractionDigits: 2 })}.` });
+      setQuotaUser(null);
+    } else {
+      setFeedback({ type: "error", message: res.error || "Failed to update quota." });
     }
   };
 
@@ -653,6 +677,20 @@ export function UserManagementPage() {
                           Send Password Reset
                         </button>
 
+                        {user.role === "Sales" && (
+                          <button
+                            onClick={() => {
+                              setQuotaUser(user);
+                              setQuotaInput(user.monthlyQuota || 20000);
+                              setActiveDropdownId(null);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-[#341100] hover:bg-[#fff7e8] rounded-xl transition-colors"
+                          >
+                            <Target className="w-3.5 h-3.5 text-[#713105]" />
+                            Set Target Quota
+                          </button>
+                        )}
+
                         <div className="border-t border-[#e8decf]/60 my-1" />
 
                         <button
@@ -902,6 +940,94 @@ export function UserManagementPage() {
                 </Button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Action 5: Set Monthly Quota Modal */}
+      {quotaUser && (
+        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl border border-[#e8decf] shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-5 border-b border-[#e8decf] flex items-center justify-between bg-[#fff7e8]">
+              <h2 className="font-bold text-sm text-[#341100] flex items-center gap-2">
+                <Target className="w-4 h-4 text-[#713105]" />
+                Set Sales Quota for {quotaUser.name}
+              </h2>
+              <button onClick={() => setQuotaUser(null)} className="text-[#7f5e35] hover:text-[#341100]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveQuota} className="p-5 space-y-4 text-xs text-[#341100]">
+              <p className="text-[#7f5e35]">
+                Configure monthly sales quota performance target for <strong>{quotaUser.email}</strong>.
+              </p>
+
+              <div>
+                <label className="block font-semibold text-[#4f351c] mb-1.5">
+                  Preset Target Goals
+                </label>
+                <div className="grid grid-cols-4 gap-1.5 mb-2">
+                  {[20000, 50000, 100000, 200000].map((preset) => (
+                    <Button
+                      key={preset}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setQuotaInput(preset)}
+                      className={`h-7 text-[11px] font-bold rounded-lg border-[#e8decf] ${
+                        Number(quotaInput) === preset
+                          ? "bg-[#713105] text-[#fff7e8] border-[#713105]"
+                          : "bg-[#fff7e8] text-[#713105] hover:bg-[#cfab71]/30"
+                      }`}
+                    >
+                      ₱{(preset / 1000)}k
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#4f351c] mb-1.5">
+                  Assigned Monthly Target Quota (₱ PHP) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-sm text-[#713105]">
+                    ₱
+                  </span>
+                  <Input
+                    type="number"
+                    min="1000"
+                    step="500"
+                    required
+                    value={quotaInput}
+                    onChange={(e) => setQuotaInput(e.target.value)}
+                    className="pl-8 bg-[#fff7e8] border-[#e8decf] rounded-xl text-sm font-bold text-[#341100] h-10 focus:bg-white"
+                    placeholder="20000"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3 border-t border-[#e8decf]">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setQuotaUser(null)}
+                  className="border-[#e8decf] text-[#7f5e35] text-xs rounded-xl"
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  type="submit"
+                  disabled={actionLoading || Number(quotaInput || 0) <= 0}
+                  className="bg-[#713105] text-[#fff7e8] hover:bg-[#4f351c] text-xs font-semibold rounded-xl px-4 py-2 gap-1.5"
+                >
+                  {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  Assign Target Quota
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -90,6 +90,7 @@ export async function getCurrentUserAction() {
         initials: profile?.initials || (profile?.full_name ? profile.full_name.slice(0, 2).toUpperCase() : "EM"),
         employeeId: profile?.employee_id || "EMP-000",
         department: profile?.department || "General",
+        monthlyQuota: Number(profile?.monthly_quota ?? user.user_metadata?.monthly_quota ?? 20000),
       },
     };
   } catch (err) {
